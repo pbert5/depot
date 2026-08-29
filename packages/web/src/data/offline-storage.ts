@@ -24,8 +24,18 @@ const STORES = {
 const KEYS = {
   SETTINGS: 'settings',
   DATA_VERSION: 'data-version',
-  BOOKMARKS: 'bookmarks'
+  BOOKMARKS: 'bookmarks',
+  MIGRATION: 'server-migration-v1'
 } as const;
+
+const apiRequest = async <T>(path: string, init?: RequestInit): Promise<T> => {
+  const response = await fetch(`/api${path}`, {
+    ...init,
+    headers: { 'content-type': 'application/json', ...(init?.headers ?? {}) }
+  });
+  if (!response.ok) throw new Error(`Depot API ${response.status}`);
+  return (response.status === 204 ? undefined : await response.json()) as T;
+};
 
 const stampTimestamps = <T extends { createdAt?: string; updatedAt?: string }>(
   entity: T
@@ -210,6 +220,11 @@ class OfflineStorage {
   // Collections
   async getCollections(): Promise<depot.StoredCollection[]> {
     try {
+      return await apiRequest<depot.StoredCollection[]>('/collections');
+    } catch {
+      // Before the one-time migration completes, the old store remains a recovery source.
+    }
+    try {
       const store = await this.store(STORES.COLLECTIONS);
       return ((await req(store.getAll())) as depot.StoredCollection[] | undefined) ?? [];
     } catch (error) {
@@ -220,6 +235,11 @@ class OfflineStorage {
 
   async getCollection(id: string): Promise<depot.StoredCollection | null> {
     try {
+      return await apiRequest<depot.StoredCollection | null>(`/collections/${encodeURIComponent(id)}`);
+    } catch {
+      // Recovery fallback; normal writes go to the API whenever it is reachable.
+    }
+    try {
       const store = await this.store(STORES.COLLECTIONS);
       return ((await req(store.get(id))) as depot.StoredCollection | undefined) ?? null;
     } catch (error) {
@@ -229,11 +249,27 @@ class OfflineStorage {
   }
 
   async saveCollection(collection: depot.Collection): Promise<void> {
+    const document = stampTimestamps(toStoredCollection(normalizeCollection(collection)));
+    try {
+      await apiRequest(`/collections/${encodeURIComponent(document.id)}`, {
+        method: 'PUT',
+        body: JSON.stringify(document)
+      });
+      return;
+    } catch {
+      // Keep a local draft if the server is temporarily unavailable.
+    }
     const store = await this.store(STORES.COLLECTIONS, 'readwrite');
-    await req(store.put(stampTimestamps(toStoredCollection(normalizeCollection(collection)))));
+    await req(store.put(document));
   }
 
   async deleteCollection(id: string): Promise<void> {
+    try {
+      await apiRequest(`/collections/${encodeURIComponent(id)}`, { method: 'DELETE' });
+      return;
+    } catch {
+      // A local draft may still be removed while offline.
+    }
     const store = await this.store(STORES.COLLECTIONS, 'readwrite');
     await req(store.delete(id));
   }
@@ -336,11 +372,26 @@ class OfflineStorage {
 
   // Roster Operations
   async saveRoster(roster: depot.Roster): Promise<void> {
+    const document = stampTimestamps(toStoredRoster(normalizeRoster(roster)));
+    try {
+      await apiRequest(`/rosters/${encodeURIComponent(document.id)}`, {
+        method: 'PUT',
+        body: JSON.stringify(document)
+      });
+      return;
+    } catch {
+      // Keep a local draft if the server is temporarily unavailable.
+    }
     const store = await this.store(STORES.ROSTERS, 'readwrite');
-    await req(store.put(stampTimestamps(toStoredRoster(normalizeRoster(roster)))));
+    await req(store.put(document));
   }
 
   async getRoster(rosterId: string): Promise<depot.StoredRoster | null> {
+    try {
+      return await apiRequest<depot.StoredRoster | null>(`/rosters/${encodeURIComponent(rosterId)}`);
+    } catch {
+      // Recovery fallback; the server is authoritative when available.
+    }
     try {
       const store = await this.store(STORES.ROSTERS);
       return ((await req(store.get(rosterId))) as depot.StoredRoster | undefined) ?? null;
@@ -352,6 +403,11 @@ class OfflineStorage {
 
   async getAllRosters(): Promise<depot.StoredRoster[]> {
     try {
+      return await apiRequest<depot.StoredRoster[]>('/rosters');
+    } catch {
+      // Recovery fallback; the server is authoritative when available.
+    }
+    try {
       const store = await this.store(STORES.ROSTERS);
       return ((await req(store.getAll())) as depot.StoredRoster[] | undefined) ?? [];
     } catch (error) {
@@ -361,8 +417,58 @@ class OfflineStorage {
   }
 
   async deleteRoster(rosterId: string): Promise<void> {
+    try {
+      await apiRequest(`/rosters/${encodeURIComponent(rosterId)}`, { method: 'DELETE' });
+      return;
+    } catch {
+      // A local draft may still be removed while offline.
+    }
     const store = await this.store(STORES.ROSTERS, 'readwrite');
     await req(store.delete(rosterId));
+  }
+
+  async migrateLegacyUserData(): Promise<{ migrated: boolean; rosters: number; collections: number }> {
+    const marker = await this.getUserDataMarker(KEYS.MIGRATION);
+    if (marker) return { migrated: false, rosters: 0, collections: 0 };
+    try {
+      const [remoteRosters, remoteCollections] = await Promise.all([
+        apiRequest<depot.StoredRoster[]>('/rosters'),
+        apiRequest<depot.StoredCollection[]>('/collections')
+      ]);
+      const [legacyRosters, legacyCollections] = await Promise.all([
+        this.getLegacyRosters(),
+        this.getLegacyCollections()
+      ]);
+      let rosters = 0;
+      let collections = 0;
+      if (remoteRosters.length === 0) for (const roster of legacyRosters) { await apiRequest(`/rosters/${encodeURIComponent(roster.id)}`, { method: 'PUT', body: JSON.stringify(roster) }); rosters++; }
+      if (remoteCollections.length === 0) for (const collection of legacyCollections) { await apiRequest(`/collections/${encodeURIComponent(collection.id)}`, { method: 'PUT', body: JSON.stringify(collection) }); collections++; }
+      await this.setUserDataMarker(KEYS.MIGRATION, new Date().toISOString());
+      return { migrated: true, rosters, collections };
+    } catch (error) {
+      console.warn('Depot server migration is waiting for API availability', error);
+      return { migrated: false, rosters: 0, collections: 0 };
+    }
+  }
+
+  private async getLegacyRosters(): Promise<depot.StoredRoster[]> {
+    const store = await this.store(STORES.ROSTERS);
+    return ((await req(store.getAll())) as depot.StoredRoster[] | undefined) ?? [];
+  }
+
+  private async getLegacyCollections(): Promise<depot.StoredCollection[]> {
+    const store = await this.store(STORES.COLLECTIONS);
+    return ((await req(store.getAll())) as depot.StoredCollection[] | undefined) ?? [];
+  }
+
+  private async getUserDataMarker(key: string): Promise<string | null> {
+    const store = await this.store(STORES.USER_DATA);
+    return ((await req(store.get(key))) as string | undefined) ?? null;
+  }
+
+  private async setUserDataMarker(key: string, value: string): Promise<void> {
+    const store = await this.store(STORES.USER_DATA, 'readwrite');
+    await req(store.put(value, key));
   }
 
   // Database Management
