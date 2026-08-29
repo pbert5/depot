@@ -5,6 +5,8 @@ import { sortByName } from '@depot/core/utils/common';
 import {
   BATTLEFIELD_ROLES,
   BATTLEFIELD_ROLE_LABELS,
+  DATASHEET_CATEGORIES,
+  DATASHEET_CATEGORY_LABELS,
   CODEX_SLUG,
   type BattlefieldRole,
   type DatasheetListItem,
@@ -14,6 +16,7 @@ import {
   filterDatasheetsBySettings,
   filterDatasheetsBySupplement,
   getListItemRole,
+  getListItemCategory,
   getSupplementKey,
   isSupplementEntry,
   normalizeSupplementValue,
@@ -21,6 +24,7 @@ import {
   sortDatasheetsBySupplementPreference
 } from '@depot/core/utils/datasheets';
 import { getMinimumNumericPoints } from '@depot/core/utils/model-costs';
+import { searchItems } from '@depot/core/utils/search';
 import { Grid, Search } from '@/components/ui';
 import PillTabs from '@/components/shared/pill-tabs';
 import Sheet from '@/components/ui/sheet';
@@ -42,7 +46,7 @@ interface DatasheetBrowserProps<T extends DatasheetListItem> {
   catalogueMode?: boolean;
 }
 
-type RoleTab = 'all' | BattlefieldRole;
+type RoleTab = 'all' | BattlefieldRole | import('@depot/core/utils/datasheets').DatasheetCategory;
 type CatalogueSort = 'name' | 'relevance' | 'points';
 
 const CATALOGUE_SESSION_KEY = 'depot:datasheet-catalogue-state';
@@ -69,16 +73,6 @@ const readCatalogueState = (params: URLSearchParams) => {
     sort: read('sort', 'relevance') as CatalogueSort,
     filter: read('filter', 'all')
   };
-};
-
-const searchRelevance = (name: string, query: string): number => {
-  const normalizedName = name.toLocaleLowerCase();
-  const normalizedQuery = query.toLocaleLowerCase();
-  if (normalizedName === normalizedQuery) return 0;
-  if (normalizedName.startsWith(normalizedQuery)) return 1;
-  const words = normalizedName.split(/\s+/);
-  if (words.some((word) => word.startsWith(normalizedQuery))) return 2;
-  return normalizedName.includes(normalizedQuery) ? 3 : 4;
 };
 
 const numericPoints = <T extends DatasheetListItem>(item: T): number => {
@@ -223,16 +217,21 @@ export const DatasheetBrowser = <T extends DatasheetListItem>({
   const normalizedQuery = debouncedQuery.trim().toLowerCase();
   const searchedDatasheets = useMemo(() => {
     const matches = normalizedQuery
-      ? filteredBySettings.filter((sheet) => sheet.name.toLowerCase().includes(normalizedQuery))
+      ? searchItems(filteredBySettings, normalizedQuery, {
+          getText: (sheet) => sheet.name,
+          getMetadata: (sheet) => ('keywords' in sheet ? {
+            keywords: sheet.keywords.map((entry) => entry.keyword),
+            category: getListItemCategory(sheet)
+          } : { category: getListItemCategory(sheet) }),
+          getKey: (sheet) => sheet.slug
+        })
       : filteredBySettings;
     if (!catalogueMode) {
       return sortDatasheetsBySupplementPreference(sortByName(matches), supplement.selected, supplement.hasSupplements);
     }
     return [...matches].sort((a, b) => {
       if (catalogueSort === 'points') return numericPoints(a) - numericPoints(b) || a.name.localeCompare(b.name);
-      if (catalogueSort === 'relevance' && normalizedQuery) {
-        return searchRelevance(a.name, normalizedQuery) - searchRelevance(b.name, normalizedQuery) || a.name.localeCompare(b.name);
-      }
+      if (catalogueSort === 'relevance' && normalizedQuery) return 0;
       return a.name.localeCompare(b.name);
     });
   }, [catalogueMode, catalogueSort, filteredBySettings, normalizedQuery, supplement.selected, supplement.hasSupplements]);
@@ -272,7 +271,9 @@ export const DatasheetBrowser = <T extends DatasheetListItem>({
   const visibleDatasheets = useMemo(() => {
     if (!catalogueMode && (!roleTabs || selectedRole === 'all')) return searchedDatasheets;
     if (selectedRole === 'all') return searchedDatasheets;
-    return searchedDatasheets.filter((sheet) => getListItemRole(sheet) === selectedRole);
+    return searchedDatasheets.filter((sheet) =>
+      catalogueMode ? getListItemCategory(sheet) === selectedRole : getListItemRole(sheet) === selectedRole
+    );
   }, [catalogueMode, roleTabs, selectedRole, searchedDatasheets]);
 
   const emptyMessage = debouncedQuery
@@ -285,7 +286,13 @@ export const DatasheetBrowser = <T extends DatasheetListItem>({
     </div>
   ));
 
-  const categoryTabs = roleTabs ?? [];
+  const categoryTabs = catalogueMode
+    ? DATASHEET_CATEGORIES.map((category) => ({
+        value: category,
+        label: DATASHEET_CATEGORY_LABELS[category],
+        count: searchedDatasheets.filter((sheet) => getListItemCategory(sheet) === category).length
+      })).filter((tab) => tab.count > 0).concat([{ value: 'all' as const, label: 'All', count: searchedDatasheets.length }])
+    : roleTabs ?? [];
   const catalogueControls = catalogueMode ? (
     <>
       <div className="hidden md:block">
@@ -325,7 +332,7 @@ export const DatasheetBrowser = <T extends DatasheetListItem>({
   ) : null;
 
   const groupedResults = catalogueMode && !normalizedQuery && selectedRole === 'all'
-    ? BATTLEFIELD_ROLES.map((role) => ({ role, items: visibleDatasheets.filter((sheet) => getListItemRole(sheet) === role) })).concat([{ role: 'other' as const, items: visibleDatasheets.filter((sheet) => getListItemRole(sheet) === 'other') }]).filter((group) => group.items.length > 0)
+    ? DATASHEET_CATEGORIES.map((category) => ({ role: category, items: visibleDatasheets.filter((sheet) => getListItemCategory(sheet) === category) })).filter((group) => group.items.length > 0)
     : null;
 
   return (
@@ -380,7 +387,7 @@ export const DatasheetBrowser = <T extends DatasheetListItem>({
             id="datasheet-results"
             data-testid="datasheet-results"
           >
-            {groupedResults ? groupedResults.map((group) => <section key={group.role} className="flex flex-col gap-2" aria-labelledby={`datasheet-group-${group.role}`}><h2 id={`datasheet-group-${group.role}`} className="pt-2 text-sm font-semibold uppercase tracking-wide text-subtle">{BATTLEFIELD_ROLE_LABELS[group.role]}</h2>{group.items.map((datasheet) => <div key={datasheet.slug} id={datasheet.id}>{renderItem(datasheet)}</div>)}</section>) : resultItems}
+            {groupedResults ? groupedResults.map((group) => <section key={group.role} className="flex flex-col gap-2" aria-labelledby={`datasheet-group-${group.role}`}><h2 id={`datasheet-group-${group.role}`} className="pt-2 text-sm font-semibold uppercase tracking-wide text-subtle">{DATASHEET_CATEGORY_LABELS[group.role]}</h2>{group.items.map((datasheet) => <div key={datasheet.slug} id={datasheet.id}>{renderItem(datasheet)}</div>)}</section>) : resultItems}
           </div>
         ) : (
           <Grid

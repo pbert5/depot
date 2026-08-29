@@ -147,8 +147,22 @@ export const sortDatasheetsBySupplementPreference = <T extends DatasheetListItem
 
 export type { BattlefieldRole };
 
-/** Category is the public catalogue name for the existing battlefield role. */
-export type DatasheetCategory = BattlefieldRole;
+/** Faction-independent catalogue buckets derived from exact datasheet keywords. */
+export type DatasheetCategory =
+  | 'epic-hero' | 'character' | 'battleline' | 'infantry' | 'mounted' | 'beast'
+  | 'swarm' | 'transport' | 'vehicle' | 'monster' | 'aircraft' | 'fortification' | 'other';
+
+export const DATASHEET_CATEGORY_LABELS: Record<DatasheetCategory, string> = {
+  'epic-hero': 'Epic Heroes', character: 'Characters', battleline: 'Battleline',
+  infantry: 'Infantry', mounted: 'Mounted', beast: 'Beasts', swarm: 'Swarms',
+  transport: 'Transports', vehicle: 'Vehicles', monster: 'Monsters', aircraft: 'Aircraft',
+  fortification: 'Fortifications', other: 'Other Units'
+};
+
+export const DATASHEET_CATEGORIES: DatasheetCategory[] = [
+  'epic-hero', 'character', 'battleline', 'infantry', 'mounted', 'beast', 'swarm',
+  'transport', 'vehicle', 'monster', 'aircraft', 'fortification', 'other'
+];
 
 export const BATTLEFIELD_ROLE_LABELS: Record<BattlefieldRole, string> = {
   'epic-hero': 'Epic Heroes',
@@ -189,7 +203,25 @@ export const getBattlefieldRole = (datasheet: Pick<Datasheet, 'keywords'>): Batt
 /** Derives the catalogue category using the established role precedence. */
 export const deriveDatasheetCategory = (
   datasheet: Pick<Datasheet, 'keywords'>
-): DatasheetCategory => getBattlefieldRole(datasheet);
+): DatasheetCategory => {
+  const has = (keyword: string) => hasExactKeyword(datasheet, keyword);
+  if (has('Epic Hero')) return 'epic-hero';
+  if (has('Character')) return 'character';
+  if (has('Battleline')) return 'battleline';
+  if (has('Transport')) return 'transport';
+  if (has('Monster')) return 'monster';
+  if (has('Aircraft')) return 'aircraft';
+  if (has('Fortification')) return 'fortification';
+  if (has('Mounted')) return 'mounted';
+  if (has('Infantry')) return 'infantry';
+  if (has('Vehicle')) return 'vehicle';
+  if (has('Beast')) return 'beast';
+  if (has('Swarm')) return 'swarm';
+  return 'other';
+};
+
+export const getListItemCategory = (item: DatasheetListItem): DatasheetCategory =>
+  'keywords' in item ? deriveDatasheetCategory(item) : (item.role ?? 'other');
 
 export const getDatasheetCategory = deriveDatasheetCategory;
 
