@@ -286,12 +286,12 @@ export const DatasheetBrowser = <T extends DatasheetListItem>({
     </div>
   ));
 
-  const categoryTabs = catalogueMode
+  const categoryTabs: { value: RoleTab; label: string; count: number }[] = catalogueMode
     ? DATASHEET_CATEGORIES.map((category) => ({
         value: category,
         label: DATASHEET_CATEGORY_LABELS[category],
         count: searchedDatasheets.filter((sheet) => getListItemCategory(sheet) === category).length
-      })).filter((tab) => tab.count > 0).concat([{ value: 'all' as const, label: 'All', count: searchedDatasheets.length }])
+      })).filter((tab) => tab.count > 0).concat([{ value: 'all', label: 'All', count: searchedDatasheets.length }])
     : roleTabs ?? [];
   const catalogueControls = catalogueMode ? (
     <>
