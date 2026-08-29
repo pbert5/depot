@@ -74,7 +74,7 @@ async function put(client: PoolClient, kind: Kind, doc: Document, conflict: 'rep
 async function handle(req: IncomingMessage, res: ServerResponse) {
   const url = new URL(req.url ?? '/', `http://${req.headers.host ?? 'localhost'}`);
   if (req.method === 'OPTIONS') return json(res, 204, null, { 'access-control-allow-origin': '*', 'access-control-allow-methods': 'GET,POST,PUT,DELETE,OPTIONS', 'access-control-allow-headers': 'content-type' });
-  if (url.pathname === '/health' || url.pathname === '/ready') {
+  if (url.pathname === '/health' || url.pathname === '/ready' || url.pathname === '/api/health' || url.pathname === '/api/ready') {
     try { await pool.query('SELECT 1'); return json(res, 200, { ok: true }); } catch { return json(res, 503, { ok: false }); }
   }
   const match = url.pathname.match(/^\/api\/(rosters|collections)(?:\/([^/]+))?$/);
