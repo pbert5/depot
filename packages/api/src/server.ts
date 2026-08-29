@@ -24,7 +24,8 @@ const readBody = async (req: IncomingMessage): Promise<unknown> => {
   let body = '';
   for await (const chunk of req) body += chunk;
   if (body.length > 10_000_000) throw new Error('request too large');
-  return JSON.parse(body || '{}');
+  const contentType = String(req.headers['content-type'] ?? '');
+  return contentType.includes('yaml') || contentType.includes('yml') ? body : JSON.parse(body || '{}');
 };
 
 const validateDocument = (value: unknown): Document => {
@@ -104,7 +105,7 @@ async function handle(req: IncomingMessage, res: ServerResponse) {
   if (url.pathname === '/api/import' && req.method === 'POST') {
     const raw = await readBody(req);
     const parsed = typeof raw === 'object' && raw && 'content' in raw ? (raw as { content: string; format?: string }) : raw;
-    const source = typeof parsed === 'object' && parsed && 'format' in parsed && (parsed as { format?: string }).format === 'yaml' ? parseYaml((parsed as unknown as { content: string }).content) : parsed;
+    const source = typeof parsed === 'string' ? parseYaml(parsed) : typeof parsed === 'object' && parsed && 'format' in parsed && (parsed as { format?: string }).format === 'yaml' ? parseYaml((parsed as unknown as { content: string }).content) : parsed;
     if (!source || typeof source !== 'object' || (source as Record<string, unknown>).format !== format || (source as Record<string, unknown>).formatVersion !== schemaVersion) throw new Error('unsupported depot export format or version');
     const input = source as { rosters?: unknown[]; collections?: unknown[] };
     const rosters = (input.rosters ?? []).map(validateDocument); const collections = (input.collections ?? []).map(validateDocument);
