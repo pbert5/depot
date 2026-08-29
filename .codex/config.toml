@@ -1,0 +1,8 @@
+[agents]
+enabled = true
+max_concurrent_threads_per_session = 8
+
+[mcp_servers.chrome-devtools]
+command = "docker"
+args = ["compose", "run", "--rm", "--no-deps", "-T", "chrome-devtools-mcp"]
+approval_mode = "auto"

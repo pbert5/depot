@@ -1,0 +1,1 @@
+{"mcpServers":{"chrome-devtools":{"command":"docker","args":["compose","run","--rm","--no-deps","-T","chrome-devtools-mcp"],"alwaysLoad":true}}}

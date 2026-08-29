@@ -48,5 +48,25 @@ services:
     ports:
       - "127.0.0.1:${DEPOT_PORT:-19096}:80"
 
+  depot-test:
+    build:
+      context: .
+      dockerfile: Dockerfile.test
+    profiles: ["test"]
+    init: true
+    working_dir: /app
+
+  chrome-devtools-mcp:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.chrome-devtools-mcp
+    profiles: ["development-tools"]
+    init: true
+    stdin_open: true
+    tty: false
+    shm_size: 1gb
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
 volumes:
   depot-db-data:

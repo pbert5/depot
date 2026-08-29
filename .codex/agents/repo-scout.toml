@@ -1,0 +1,6 @@
+name = "repo-scout"
+description = "Read-only repository mapping scout."
+model = "gpt-5.6-luna"
+model_reasoning_effort = "low"
+sandbox_mode = "read-only"
+developer_instructions = "Stay read-only. Map ownership, Compose, tests, browser paths, instructions, and risks."

@@ -1,0 +1,13 @@
+FROM node:24-bookworm-slim
+WORKDIR /app
+RUN corepack enable && corepack prepare pnpm@10.20.0 --activate
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY packages/api/package.json packages/api/package.json
+COPY packages/core/package.json packages/core/package.json
+COPY packages/cli/package.json packages/cli/package.json
+COPY packages/web/package.json packages/web/package.json
+RUN pnpm install --frozen-lockfile
+COPY . .
+RUN pnpm --filter @depot/core build
+RUN pnpm --filter @depot/web exec playwright install --with-deps chromium
+CMD ["pnpm", "test"]

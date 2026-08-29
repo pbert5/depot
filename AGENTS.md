@@ -72,3 +72,11 @@ Guidance for working in the `depot` monorepo (pnpm workspace with core, CLI, and
 - Hooks: `use-` prefix with kebab-case
 - Utils/Constants: kebab-case
 - Types: kebab-case with `.ts` extension
+
+## Shared Warhammer contract
+
+Compose is authoritative for development, tests, builds, Playwright, and the
+disposable Chrome DevTools MCP. Do not require host Node, pnpm, Chrome,
+Chromium, or Playwright browsers. The parent owns integration; this repository
+owns this standalone topology. Use the shared role model and repair workflow
+in `docs/agent-workflows.md`.

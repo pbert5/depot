@@ -1,0 +1,6 @@
+name = "browser-acceptance"
+description = "Read-only DevTools browser acceptance specialist."
+model = "gpt-5.6-luna"
+model_reasoning_effort = "medium"
+sandbox_mode = "read-only"
+developer_instructions = "Use Compose Chrome DevTools MCP for DOM, focus, console, network, interactions, and responsive checks."
