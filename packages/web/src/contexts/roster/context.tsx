@@ -1,10 +1,9 @@
 import type { FC, ReactNode } from 'react';
-import { createContext, useContext, useReducer, useEffect, useMemo, useRef } from 'react';
+import { createContext, useContext, useReducer, useEffect, useMemo, useRef, useState } from 'react';
 import { offlineStorage } from '@/data/offline-storage';
-import { useToast } from '@/contexts/toast/context';
 import { useFactionsContext } from '@/contexts/factions/context';
 import { hydrateRoster } from '@/utils/refresh-user-data';
-import type { RosterContextValue } from './types';
+import type { RosterContextValue, RosterSaveState } from './types';
 import { rosterReducer } from './reducer';
 import { initialState } from './constants';
 
@@ -17,9 +16,16 @@ interface RosterProviderProps {
 
 export const RosterProvider: FC<RosterProviderProps> = ({ children, rosterId }) => {
   const [state, dispatch] = useReducer(rosterReducer, initialState);
-  const { showToast } = useToast();
+  const [saveState, setSaveState] = useState<RosterSaveState>('saved');
   const { getDatasheet, getFactionManifest } = useFactionsContext();
-  const saveQueueRef = useRef<Promise<void>>(Promise.resolve()); // Serialise roster saves
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const generationRef = useRef(0);
+  const retryCountRef = useRef(0);
+  const latestStateRef = useRef(state);
+  const skipNextSaveRef = useRef(Boolean(rosterId));
+
+  latestStateRef.current = state;
 
   // Load roster on mount if rosterId is provided
   useEffect(() => {
@@ -29,6 +35,7 @@ export const RosterProvider: FC<RosterProviderProps> = ({ children, rosterId }) 
           const stored = await offlineStorage.getRoster(rosterId);
           if (stored) {
             const roster = await hydrateRoster(stored, { getDatasheet, getFactionManifest });
+            skipNextSaveRef.current = true;
             dispatch({ type: 'SET_ROSTER', payload: roster });
           }
         } catch (err) {
@@ -39,39 +46,88 @@ export const RosterProvider: FC<RosterProviderProps> = ({ children, rosterId }) 
     }
   }, [rosterId, getDatasheet, getFactionManifest]);
 
-  // Auto-save roster on state change
+  // Debounced, coalesced server save. The generation check prevents an older
+  // response from acknowledging a newer edit.
   useEffect(() => {
-    // Don't save the initial empty state
-    if (state.id) {
-      let isCancelled = false;
+    if (!state.id) return;
 
-      const enqueueSave = async () => {
-        const performSave = async () => {
-          try {
-            await offlineStorage.saveRoster(state);
-          } catch (error) {
-            console.error(`Failed to auto-save roster ${state.id}:`, error);
-            if (!isCancelled) {
-              showToast({
-                type: 'error',
-                title: 'Failed to save roster',
-                message: 'Changes may not be saved. Please try again.'
-              });
+    if (skipNextSaveRef.current) {
+      skipNextSaveRef.current = false;
+      setSaveState('saved');
+      return;
+    }
+
+    generationRef.current += 1;
+    retryCountRef.current = 0;
+    setSaveState('unsaved');
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    if (retryTimerRef.current) clearTimeout(retryTimerRef.current);
+
+    const generation = generationRef.current;
+    const scheduleSave = (delay: number) => {
+      saveTimerRef.current = setTimeout(() => {
+        if (generation !== generationRef.current) return;
+        setSaveState('saving');
+        void offlineStorage.saveRosterToServer(latestStateRef.current).then(
+          () => {
+            if (generation === generationRef.current) setSaveState('saved');
+          },
+          (error: unknown) => {
+            console.error(`Failed to auto-save roster ${latestStateRef.current.id}:`, error);
+            if (generation !== generationRef.current) return;
+            void offlineStorage.saveRosterLocally(latestStateRef.current).catch((localError: unknown) => {
+              console.error(`Failed to keep local roster draft ${latestStateRef.current.id}:`, localError);
+            });
+            setSaveState('failed');
+            if (retryCountRef.current < 3) {
+              retryCountRef.current += 1;
+              retryTimerRef.current = setTimeout(
+                () => scheduleSave(0),
+                Math.min(1000 * 2 ** (retryCountRef.current - 1), 4000)
+              );
             }
           }
-        };
+        );
+      }, delay);
+    };
+    scheduleSave(750);
 
-        saveQueueRef.current = saveQueueRef.current.catch(() => undefined).then(performSave);
-        await saveQueueRef.current;
-      };
+    return () => {
+      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+      if (retryTimerRef.current) clearTimeout(retryTimerRef.current);
+    };
+  }, [state]);
 
-      void enqueueSave();
+  useEffect(
+    () => () => {
+      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+      if (retryTimerRef.current) clearTimeout(retryTimerRef.current);
+    },
+    []
+  );
 
-      return () => {
-        isCancelled = true;
-      };
-    }
-  }, [state, showToast]);
+  const retrySave = () => {
+    if (!state.id) return;
+    generationRef.current += 1;
+    retryCountRef.current = 0;
+    setSaveState('unsaved');
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    if (retryTimerRef.current) clearTimeout(retryTimerRef.current);
+    const generation = generationRef.current;
+    setSaveState('saving');
+    void offlineStorage.saveRosterToServer(latestStateRef.current).then(
+      () => {
+        if (generation === generationRef.current) setSaveState('saved');
+      },
+      (error: unknown) => {
+        console.error(`Failed to retry roster save ${latestStateRef.current.id}:`, error);
+        if (generation === generationRef.current) setSaveState('failed');
+        void offlineStorage.saveRosterLocally(latestStateRef.current).catch((localError: unknown) => {
+          console.error(`Failed to keep local roster draft ${latestStateRef.current.id}:`, localError);
+        });
+      }
+    );
+  };
 
   // `dispatch` is stable, so the action set is created once.
   const actions = useMemo<Omit<RosterContextValue, 'state'>>(
@@ -102,7 +158,28 @@ export const RosterProvider: FC<RosterProviderProps> = ({ children, rosterId }) 
     []
   );
 
-  return <RosterContext.Provider value={{ state, ...actions }}>{children}</RosterContext.Provider>;
+  const saveLabel = {
+    saved: 'Saved',
+    saving: 'Saving…',
+    unsaved: 'Unsaved changes',
+    failed: 'Save failed'
+  }[saveState];
+
+  return (
+    <RosterContext.Provider value={{ state, saveState, retrySave, ...actions }}>
+      {children}
+      {state.id && (
+        <div className="fixed bottom-3 right-3 z-20 flex items-center gap-2 rounded-sm border border-border-strong bg-surface-card px-3 py-2 text-xs text-subtle shadow-lg" data-testid="roster-save-status" aria-live="polite">
+          <span>{saveLabel}</span>
+          {saveState === 'failed' && (
+            <button type="button" className="font-bold text-accent-600 underline" onClick={retrySave}>
+              Retry
+            </button>
+          )}
+        </div>
+      )}
+    </RosterContext.Provider>
+  );
 };
 
 export const useRoster = (): RosterContextValue => {

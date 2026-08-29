@@ -7,7 +7,9 @@ import { createMockRoster } from '@/test/mock-data';
 // Mock offline storage using vi.hoisted for proper scoping
 const mockOfflineStorage = vi.hoisted(() => ({
   getRoster: vi.fn(),
-  saveRoster: vi.fn()
+  saveRoster: vi.fn(),
+  saveRosterToServer: vi.fn(),
+  saveRosterLocally: vi.fn()
 }));
 
 const mockToastContext = vi.hoisted(() => ({
@@ -39,7 +41,7 @@ vi.mock('@/contexts/toast/context', () => ({
 
 // Test component to consume the context
 const TestComponent = ({ rosterId: _rosterId }: { rosterId?: string }) => {
-  const { state, createRoster } = useRoster();
+  const { state, createRoster, updateRosterDetails } = useRoster();
 
   const handleCreateRoster = () => {
     const newId = createRoster({
@@ -85,6 +87,12 @@ const TestComponent = ({ rosterId: _rosterId }: { rosterId?: string }) => {
       <button data-testid="create-roster" onClick={handleCreateRoster}>
         Create Roster
       </button>
+      <button
+        data-testid="rename-roster"
+        onClick={() => updateRosterDetails({ name: 'Updated Roster', detachments: state.detachments, maxPoints: state.points.max })}
+      >
+        Rename Roster
+      </button>
     </div>
   );
 };
@@ -97,9 +105,12 @@ const TestWrapper = ({ rosterId, children }: { rosterId?: string; children: Reac
 describe('RosterProvider', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.useFakeTimers();
+    mockOfflineStorage.saveRosterToServer.mockResolvedValue(undefined);
   });
 
   afterEach(() => {
+    vi.useRealTimers();
     vi.restoreAllMocks();
   });
 
@@ -188,7 +199,7 @@ describe('RosterProvider', () => {
     expect(rosterId).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i);
   });
 
-  it('should auto-save roster changes to storage', async () => {
+  it('debounces and coalesces roster changes, then reports Saved', async () => {
     render(
       <TestWrapper>
         <TestComponent />
@@ -199,17 +210,20 @@ describe('RosterProvider', () => {
       screen.getByTestId('create-roster').click();
     });
 
-    await waitFor(() => {
-      expect(mockOfflineStorage.saveRoster).toHaveBeenCalled();
-    });
+    expect(screen.getByTestId('roster-save-status')).toHaveTextContent('Unsaved changes');
+    act(() => vi.advanceTimersByTime(749));
+    expect(mockOfflineStorage.saveRosterToServer).not.toHaveBeenCalled();
+    act(() => vi.advanceTimersByTime(1));
+    await waitFor(() => expect(mockOfflineStorage.saveRosterToServer).toHaveBeenCalledTimes(1));
 
-    const savedRoster = mockOfflineStorage.saveRoster.mock.calls[0][0];
+    const savedRoster = mockOfflineStorage.saveRosterToServer.mock.calls[0][0];
     expect(savedRoster).toMatchObject({
       name: 'Test Roster',
       factionId: 'SM',
       factionSlug: 'space-marines',
       points: { current: 0, max: 2000 }
     });
+    await waitFor(() => expect(screen.getByTestId('roster-save-status')).toHaveTextContent('Saved'));
   });
 
   it('should not save initial empty state', () => {
@@ -223,9 +237,9 @@ describe('RosterProvider', () => {
     expect(mockOfflineStorage.saveRoster).not.toHaveBeenCalled();
   });
 
-  it('should surface auto-save failures via toast notifications', async () => {
+  it('keeps edits and exposes failure with bounded retry and manual retry', async () => {
     const error = new Error('IndexedDB write failure');
-    mockOfflineStorage.saveRoster.mockRejectedValueOnce(error);
+    mockOfflineStorage.saveRosterToServer.mockRejectedValueOnce(error);
     const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
     render(
@@ -236,22 +250,61 @@ describe('RosterProvider', () => {
 
     act(() => {
       screen.getByTestId('create-roster').click();
+      vi.advanceTimersByTime(750);
     });
 
-    await waitFor(() => {
-      expect(mockToastContext.showToast).toHaveBeenCalledWith({
-        type: 'error',
-        title: 'Failed to save roster',
-        message: 'Changes may not be saved. Please try again.'
-      });
-    });
+    await waitFor(() => expect(screen.getByTestId('roster-save-status')).toHaveTextContent('Save failed'));
+    expect(screen.getByTestId('roster-name')).toHaveTextContent('Test Roster');
+    expect(screen.getByRole('button', { name: 'Retry' })).toBeInTheDocument();
 
-    expect(mockOfflineStorage.saveRoster).toHaveBeenCalledTimes(1);
-    expect(consoleSpy).toHaveBeenCalledWith(
-      expect.stringContaining('Failed to auto-save roster'),
-      error
-    );
+    expect(mockOfflineStorage.saveRosterToServer).toHaveBeenCalledTimes(1);
+    expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('Failed to auto-save roster'), error);
+
+    act(() => {
+      screen.getByRole('button', { name: 'Retry' }).click();
+    });
+    await waitFor(() => expect(screen.getByTestId('roster-save-status')).toHaveTextContent('Saved'));
+    expect(mockOfflineStorage.saveRosterToServer).toHaveBeenCalledTimes(2);
 
     consoleSpy.mockRestore();
   });
+
+  it('does not let an out-of-order response acknowledge newer edits', async () => {
+    const first = deferred<void>();
+    const second = deferred<void>();
+    mockOfflineStorage.saveRosterToServer.mockReturnValueOnce(first.promise).mockReturnValueOnce(second.promise);
+
+    render(
+      <TestWrapper>
+        <TestComponent />
+      </TestWrapper>
+    );
+    act(() => {
+      screen.getByTestId('create-roster').click();
+      vi.advanceTimersByTime(750);
+    });
+    await waitFor(() => expect(mockOfflineStorage.saveRosterToServer).toHaveBeenCalledTimes(1));
+
+    act(() => {
+      screen.getByTestId('rename-roster').click();
+      vi.advanceTimersByTime(750);
+    });
+    await waitFor(() => expect(mockOfflineStorage.saveRosterToServer).toHaveBeenCalledTimes(2));
+    expect(screen.getByTestId('roster-save-status')).toHaveTextContent('Saving…');
+
+    act(() => first.resolve());
+    await waitFor(() => expect(screen.getByTestId('roster-save-status')).toHaveTextContent('Saving…'));
+    act(() => second.resolve());
+    await waitFor(() => expect(screen.getByTestId('roster-save-status')).toHaveTextContent('Saved'));
+  });
 });
+
+function deferred<T>() {
+  let resolve!: (value?: T | PromiseLike<T>) => void;
+  let reject!: (reason?: unknown) => void;
+  const promise = new Promise<T>((res, rej) => {
+    resolve = (value) => res(value as T);
+    reject = rej;
+  });
+  return { promise, resolve, reject };
+}

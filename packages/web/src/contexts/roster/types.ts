@@ -2,6 +2,8 @@ import type { depot } from '@depot/core';
 
 export type RosterState = depot.Roster;
 
+export type RosterSaveState = 'saved' | 'saving' | 'unsaved' | 'failed';
+
 export type RosterAction =
   | { type: 'SET_ROSTER'; payload: depot.Roster }
   | {
@@ -43,6 +45,8 @@ type Payload<T extends RosterAction['type']> = Extract<RosterAction, { type: T }
 
 export interface RosterContextValue {
   state: RosterState;
+  saveState: RosterSaveState;
+  retrySave: () => void;
   /** Returns the generated roster id. */
   createRoster: (payload: Omit<Payload<'CREATE_ROSTER'>, 'id'>) => string;
   updateRosterDetails: (payload: Payload<'UPDATE_DETAILS'>) => void;

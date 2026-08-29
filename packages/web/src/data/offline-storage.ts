@@ -386,6 +386,22 @@ class OfflineStorage {
     await req(store.put(document));
   }
 
+  /** Persist a roster to the server without silently converting an API failure into success. */
+  async saveRosterToServer(roster: depot.Roster): Promise<void> {
+    const document = stampTimestamps(toStoredRoster(normalizeRoster(roster)));
+    await apiRequest(`/rosters/${encodeURIComponent(document.id)}`, {
+      method: 'PUT',
+      body: JSON.stringify(document)
+    });
+  }
+
+  /** Keep a recoverable local draft without contacting the API. */
+  async saveRosterLocally(roster: depot.Roster): Promise<void> {
+    const document = stampTimestamps(toStoredRoster(normalizeRoster(roster)));
+    const store = await this.store(STORES.ROSTERS, 'readwrite');
+    await req(store.put(document));
+  }
+
   async getRoster(rosterId: string): Promise<depot.StoredRoster | null> {
     try {
       return await apiRequest<depot.StoredRoster | null>(`/rosters/${encodeURIComponent(rosterId)}`);
