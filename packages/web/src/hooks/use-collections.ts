@@ -1,4 +1,5 @@
 import type { depot } from '@depot/core';
+import { useEffect } from 'react';
 
 import { offlineStorage } from '@/data/offline-storage';
 import { useFactionsContext } from '@/contexts/factions/context';
@@ -20,6 +21,11 @@ export const useCollections = (): {
       )
     );
   }, [getDatasheet, getFactionManifest]);
+  useEffect(() => {
+    const handleChange = () => void refresh();
+    window.addEventListener('depot:user-data-changed', handleChange);
+    return () => window.removeEventListener('depot:user-data-changed', handleChange);
+  }, [refresh]);
   return { collections: data ?? [], loading, error, refresh };
 };
 

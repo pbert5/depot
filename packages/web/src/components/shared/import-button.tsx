@@ -10,6 +10,7 @@ type ImportButtonProps = {
   onFilesSelected: (files: File[]) => void;
   buttonTestId?: string;
   inputTestId?: string;
+  accept?: string;
 };
 
 const ImportButton: FC<ImportButtonProps> = ({
@@ -17,7 +18,8 @@ const ImportButton: FC<ImportButtonProps> = ({
   multiple = false,
   onFilesSelected,
   buttonTestId = 'import-button',
-  inputTestId = 'import-input'
+  inputTestId = 'import-input',
+  accept = 'application/json,.json,application/yaml,.yaml,.yml'
 }) => {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -43,7 +45,7 @@ const ImportButton: FC<ImportButtonProps> = ({
         ref={fileInputRef}
         className="hidden"
         type="file"
-        accept="application/json,.json"
+        accept={accept}
         multiple={multiple}
         onChange={handleChange}
         data-testid={inputTestId}

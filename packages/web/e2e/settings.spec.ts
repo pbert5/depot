@@ -36,4 +36,20 @@ test.describe('Settings', () => {
     await toggle.click();
     await expect(toggle).toHaveAttribute('aria-checked', 'false');
   });
+
+  test('previews a YAML backup before importing', async ({ page }) => {
+    await page.setInputFiles('[data-testid="import-backup-input"]', {
+      name: 'depot-backup.yaml',
+      mimeType: 'application/yaml',
+      buffer: Buffer.from(
+        'format: depot-user-data\nformatVersion: 1\nrosters: []\ncollections: []\n'
+      )
+    });
+
+    const preview = page.getByTestId('backup-preview');
+    await expect(preview).toBeVisible();
+    await expect(preview).toContainText('YAML');
+    await expect(preview).toContainText('Rosters');
+    await expect(preview).toContainText('Collections');
+  });
 });
