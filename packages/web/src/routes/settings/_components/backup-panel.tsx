@@ -87,15 +87,15 @@ const BackupPanel = () => {
         <p className="text-sm text-body">Download all rosters and collections as a portable backup, or restore one after reviewing it.</p>
         <div className="flex flex-wrap gap-2">
           {BACKUPS.map((backup) => <Button key={backup.format} type="button" variant="secondary" size="sm" disabled={busy !== null} onClick={() => void exportBackup(backup)} data-testid={`export-backup-${backup.format}`}><Download size={16} />{busy === backup.format ? 'Exporting…' : backup.label}</Button>)}
-          <ImportButton label={busy === 'import' ? 'Reading…' : 'Import backup'} onFilesSelected={(files) => void inspectFile(files)} buttonTestId="import-backup-button" inputTestId="import-backup-input" />
+          <ImportButton label={busy === 'import' ? 'Reading…' : 'Import backup'} disabled={busy !== null} onFilesSelected={(files) => void inspectFile(files)} buttonTestId="import-backup-button" inputTestId="import-backup-input" />
         </div>
         {preview && <div className="flex flex-col gap-3 border-t border-border pt-3" data-testid="backup-preview">
           <p className="text-sm font-medium text-foreground">Backup preview</p>
           <dl className="grid grid-cols-2 gap-2 text-sm text-body"><div><dt className="text-subtle">Format</dt><dd>{preview.format.toUpperCase()}</dd></div><div><dt className="text-subtle">Version</dt><dd>{preview.version}</dd></div><div><dt className="text-subtle">Rosters</dt><dd>{preview.rosters}</dd></div><div><dt className="text-subtle">Collections</dt><dd>{preview.collections}</dd></div></dl>
           <label className="flex flex-col gap-1 text-sm font-medium text-foreground" htmlFor="backup-policy">When an ID already exists</label>
           <select id="backup-policy" className="h-11 rounded-sm border border-border-strong bg-surface-card px-2 text-sm" value={policy} onChange={(event) => setPolicy(event.target.value as ConflictPolicy)}><option value="create">Create only (keep existing)</option><option value="replace">Replace existing</option></select>
-          {preview.conflicts > 0 && <p className="text-sm text-warning-fg">{preview.conflicts} existing item{preview.conflicts === 1 ? '' : 's'} will be affected by Replace.</p>}
-          <Button type="button" size="sm" disabled={busy !== null || (policy === 'create' && preview.conflicts > 0)} onClick={submitImport} data-testid="confirm-backup-import"><Upload size={16} />Import backup</Button>
+          {preview.conflicts > 0 && <p className="text-sm text-warning-fg">{policy === 'create' ? `${preview.conflicts} matching item${preview.conflicts === 1 ? '' : 's'} already exist. Create will keep them and the API will reject this import.` : `${preview.conflicts} existing item${preview.conflicts === 1 ? '' : 's'} will be replaced.`}</p>}
+          <Button type="button" size="sm" disabled={busy !== null} onClick={submitImport} data-testid="confirm-backup-import"><Upload size={16} />Import backup</Button>
         </div>}
         {error && <p className="text-sm text-body" role="status">{error}</p>}
       </div>

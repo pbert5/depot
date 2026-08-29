@@ -11,6 +11,7 @@ type ImportButtonProps = {
   buttonTestId?: string;
   inputTestId?: string;
   accept?: string;
+  disabled?: boolean;
 };
 
 const ImportButton: FC<ImportButtonProps> = ({
@@ -19,7 +20,8 @@ const ImportButton: FC<ImportButtonProps> = ({
   onFilesSelected,
   buttonTestId = 'import-button',
   inputTestId = 'import-input',
-  accept = 'application/json,.json,application/yaml,.yaml,.yml'
+  accept = 'application/json,.json,application/yaml,.yaml,.yml',
+  disabled = false
 }) => {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -34,7 +36,9 @@ const ImportButton: FC<ImportButtonProps> = ({
   return (
     <>
       <Button
+        type="button"
         variant="secondary"
+        disabled={disabled}
         onClick={() => fileInputRef.current?.click()}
         data-testid={buttonTestId}
       >
@@ -46,6 +50,7 @@ const ImportButton: FC<ImportButtonProps> = ({
         className="hidden"
         type="file"
         accept={accept}
+        aria-label="Choose a Depot backup file"
         multiple={multiple}
         onChange={handleChange}
         data-testid={inputTestId}
