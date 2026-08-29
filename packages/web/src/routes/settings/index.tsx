@@ -10,6 +10,7 @@ import DataVersion from '@/components/shared/data-version';
 import SettingToggleItem from './_components/setting-toggle-item';
 import StorageUsage from './_components/storage-usage';
 import ThemePicker from './_components/theme-picker';
+import BackupPanel from './_components/backup-panel';
 
 // Hooks and Context
 import { useSettingsContext } from '@/contexts/settings/context';
@@ -133,6 +134,8 @@ const Settings = () => {
             onChange={(value) => handleSettingsChange('useNativeShare', value)}
           />
         </section>
+
+        <BackupPanel />
 
         <section className="flex flex-col gap-2">
           <SectionHeader title="Offline data" />

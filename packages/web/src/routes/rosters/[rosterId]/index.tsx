@@ -72,6 +72,22 @@ const RosterView: FC = () => {
     showToast({ title: 'Roster exported', type: 'success' });
   };
 
+  const handleExportYaml = async () => {
+    try {
+      const response = await fetch(`/api/rosters/${roster.id}/export.yaml`);
+      if (!response.ok) throw new Error(`Export failed (${response.status})`);
+      downloadFile(
+        `roster-${safeSlug(roster.name)}-${roster.id}.yaml`,
+        await response.text(),
+        'application/yaml;charset=utf-8'
+      );
+      showToast({ title: 'Roster exported', type: 'success' });
+    } catch (error) {
+      console.error('Failed to export roster as YAML', error);
+      showToast({ title: 'Export failed', message: 'Could not export this roster as YAML.', type: 'error' });
+    }
+  };
+
   const shareText = useMemo(
     () => generateRosterShareText(roster, factionName, { includeWargear: includeWargearOnExport }),
     [factionName, includeWargearOnExport, roster]
@@ -224,6 +240,15 @@ const RosterView: FC = () => {
         >
           <Download size={16} />
           Export JSON
+        </Button>
+        <Button
+          variant="secondary"
+          fullWidth
+          onClick={() => void handleExportYaml()}
+          data-testid="export-yaml-button"
+        >
+          <Download size={16} />
+          Export YAML
         </Button>
       }
     >
