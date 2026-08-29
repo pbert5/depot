@@ -3,8 +3,14 @@ import type { depot } from '../types/depot.js';
 import {
   CODEX_SLUG,
   getBattlefieldRole,
+  deriveDatasheetCategory,
+  filterDatasheetsByCategory,
+  filterDatasheetsByKeyword,
+  getListItemMinimumPoints,
   getListItemPoints,
   getListItemRole,
+  getSecondaryKeywordTags,
+  sortDatasheetsByCategory,
   buildSupplementLabel,
   deriveSupplementMetadata,
   filterDatasheetsBySettings,
@@ -228,6 +234,25 @@ describe('getBattlefieldRole', () => {
     expect(getBattlefieldRole(sheet('BATTLELINE'))).toBe('battleline');
     expect(getBattlefieldRole(sheet())).toBe('other');
   });
+
+  it('uses exact keyword values instead of substring matches', () => {
+    expect(getBattlefieldRole(sheet('Not a Character'))).toBe('other');
+    expect(deriveDatasheetCategory(sheet('BATTLELINE', 'Character'))).toBe('character');
+  });
+
+  it('returns stable, non-faction secondary keyword tags in source order', () => {
+    const datasheet = {
+      keywords: [
+        { keyword: 'Infantry', isFactionKeyword: 'false' },
+        { keyword: 'Character', isFactionKeyword: 'false' },
+        { keyword: 'ADEPTUS ASTARTES', isFactionKeyword: 'true' },
+        { keyword: 'Infantry', isFactionKeyword: 'false' },
+        { keyword: 'Fly', isFactionKeyword: 'false' }
+      ]
+    } as unknown as depot.Datasheet;
+
+    expect(getSecondaryKeywordTags(datasheet)).toEqual(['Infantry', 'Fly']);
+  });
 });
 
 describe('list item role and points', () => {
@@ -262,5 +287,33 @@ describe('list item role and points', () => {
 
     expect(getListItemRole(datasheet)).toBe('battleline');
     expect(getListItemPoints(datasheet)).toBe('65+');
+    expect(getListItemMinimumPoints(datasheet)).toBe(65);
+  });
+
+  it('gets minimum points from a summary without treating a plus as numeric data', () => {
+    expect(getListItemMinimumPoints({ ...summary, points: '65+' })).toBe(65);
+    expect(getListItemMinimumPoints({ ...summary, points: '—' })).toBeNull();
+  });
+
+  it('filters by category or exact keyword and sorts stably by category then name', () => {
+    const sheets = [
+      { ...summary, id: '1', slug: 'zeta', name: 'Zeta', role: 'other' as const },
+      { ...summary, id: '2', slug: 'alpha', name: 'Alpha', role: 'character' as const },
+      { ...summary, id: '3', slug: 'bravo', name: 'Bravo', role: 'character' as const }
+    ];
+
+    expect(filterDatasheetsByCategory(sheets, 'character').map((sheet) => sheet.slug)).toEqual([
+      'alpha',
+      'bravo'
+    ]);
+    expect(filterDatasheetsByKeyword([
+      { ...makeDatasheet({ slug: 'flyer', keywords: [{ keyword: 'Fly' }] }) },
+      { ...makeDatasheet({ slug: 'not-flyer', keywords: [{ keyword: 'Flyer' }] }) }
+    ], 'fly').map((sheet) => sheet.slug)).toEqual(['flyer']);
+    expect(sortDatasheetsByCategory(sheets).map((sheet) => sheet.slug)).toEqual([
+      'alpha',
+      'bravo',
+      'zeta'
+    ]);
   });
 });

@@ -7,6 +7,18 @@ const NUMERIC_COST = /^\d+$/;
 export const hasNumericCost = (cost: string | undefined | null): boolean =>
   Boolean(cost && NUMERIC_COST.test(cost.trim()));
 
+/** The smallest real points value in a set of model costs, or `null` if none are numeric. */
+export const getMinimumNumericPoints = (
+  costs: ReadonlyArray<Pick<ModelCost, 'cost'>>
+): number | null => {
+  const values = costs
+    .map((cost) => cost.cost.trim())
+    .filter((cost) => hasNumericCost(cost))
+    .map((cost) => Number(cost));
+
+  return values.length > 0 ? Math.min(...values) : null;
+};
+
 export const selectableModelCosts = <T extends { cost: string }>(costs: T[]): T[] =>
   costs.filter((cost) => hasNumericCost(cost.cost));
 
@@ -132,10 +144,9 @@ export const normalizeModelCosts = (rows: DatasheetModelCost[]): ModelCost[] =>
  * `null` when nothing on the sheet has a numeric cost.
  */
 export const summarizeModelCosts = (costs: ModelCost[]): string | null => {
-  const values = selectableModelCosts(costs).map((cost) => parseInt(cost.cost, 10));
-  if (values.length === 0) return null;
-
-  const cheapest = Math.min(...values);
+  const values = selectableModelCosts(costs).map((cost) => Number(cost.cost.trim()));
+  const cheapest = getMinimumNumericPoints(costs);
+  if (cheapest === null) return null;
   return new Set(values).size > 1 ? `${cheapest}+` : `${cheapest}`;
 };
 

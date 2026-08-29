@@ -6,6 +6,7 @@ import {
   formatCostSection,
   formatModelCostLabel,
   formatModelCostOptions,
+  getMinimumNumericPoints,
   groupModelCostsBySection,
   hasNumericCost,
   normalizeModelCosts,
@@ -34,6 +35,17 @@ describe('model cost helpers', () => {
     expect(hasNumericCost('')).toBe(false);
     expect(hasNumericCost('  ')).toBe(false);
     expect(hasNumericCost('N/A')).toBe(false);
+  });
+
+  it('returns the minimum numeric points value and ignores malformed costs', () => {
+    expect(
+      getMinimumNumericPoints([
+        row({ cost: ' 215 ' }),
+        row({ cost: '170' }),
+        row({ cost: '170+' })
+      ])
+    ).toBe(170);
+    expect(getMinimumNumericPoints([row({ cost: '' }), row({ cost: 'N/A' })])).toBeNull();
   });
 
   it('drops empty-cost headers and stamps section onto following rows', () => {

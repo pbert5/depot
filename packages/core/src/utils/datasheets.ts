@@ -1,5 +1,5 @@
 import type { BattlefieldRole, Datasheet, DatasheetSummary } from '../types/depot.js';
-import { summarizeModelCosts } from './model-costs.js';
+import { getMinimumNumericPoints, summarizeModelCosts } from './model-costs.js';
 import { groupBy } from './common.js';
 
 export type DatasheetListItem = Datasheet | DatasheetSummary;
@@ -147,6 +147,9 @@ export const sortDatasheetsBySupplementPreference = <T extends DatasheetListItem
 
 export type { BattlefieldRole };
 
+/** Category is the public catalogue name for the existing battlefield role. */
+export type DatasheetCategory = BattlefieldRole;
+
 export const BATTLEFIELD_ROLE_LABELS: Record<BattlefieldRole, string> = {
   'epic-hero': 'Epic Heroes',
   character: 'Characters',
@@ -167,13 +170,49 @@ export const BATTLEFIELD_ROLES: BattlefieldRole[] = [
  * slots, so the role is read off the keywords — most-specific first, since an
  * Epic Hero is also a Character.
  */
+export const normalizeKeyword = (keyword: string): string =>
+  keyword.trim().toLocaleLowerCase().replace(/\s+/g, ' ');
+
+const keywordSet = (datasheet: Pick<Datasheet, 'keywords'>): Set<string> =>
+  new Set(datasheet.keywords.map((entry) => normalizeKeyword(entry.keyword)));
+
+const hasKeyword = (datasheet: Pick<Datasheet, 'keywords'>, keyword: string): boolean =>
+  keywordSet(datasheet).has(normalizeKeyword(keyword));
+
 export const getBattlefieldRole = (datasheet: Pick<Datasheet, 'keywords'>): BattlefieldRole => {
-  const keywords = datasheet.keywords.map((entry) => entry.keyword.toLowerCase());
-  if (keywords.some((k) => k.includes('epic hero'))) return 'epic-hero';
-  if (keywords.some((k) => k.includes('character'))) return 'character';
-  if (keywords.some((k) => k.includes('battleline'))) return 'battleline';
+  if (hasKeyword(datasheet, 'Epic Hero')) return 'epic-hero';
+  if (hasKeyword(datasheet, 'Character')) return 'character';
+  if (hasKeyword(datasheet, 'Battleline')) return 'battleline';
   return 'other';
 };
+
+/** Derives the catalogue category using the established role precedence. */
+export const deriveDatasheetCategory = (
+  datasheet: Pick<Datasheet, 'keywords'>
+): DatasheetCategory => getBattlefieldRole(datasheet);
+
+export const getDatasheetCategory = deriveDatasheetCategory;
+
+/** Exact, non-faction keyword labels not consumed by the primary category. */
+export const getSecondaryKeywordTags = (
+  datasheet: Pick<Datasheet, 'keywords'>
+): string[] => {
+  const primaryKeywords = new Set(['epic hero', 'character', 'battleline']);
+  const seen = new Set<string>();
+  return datasheet.keywords
+    .filter((entry) => entry.keyword.trim() && entry.isFactionKeyword !== 'true')
+    .filter((entry) => !primaryKeywords.has(normalizeKeyword(entry.keyword)))
+    .filter((entry) => {
+      const normalized = normalizeKeyword(entry.keyword);
+      return !seen.has(normalized) && seen.add(normalized);
+    })
+    .map((entry) => entry.keyword.trim());
+};
+
+export const hasExactKeyword = (
+  datasheet: Pick<Datasheet, 'keywords'>,
+  keyword: string
+): boolean => hasKeyword(datasheet, keyword);
 
 /**
  * Role and points for a list row. Full datasheets carry the source data; index
@@ -185,3 +224,36 @@ export const getListItemRole = (item: DatasheetListItem): BattlefieldRole =>
 
 export const getListItemPoints = (item: DatasheetListItem): string | null =>
   'modelCosts' in item ? summarizeModelCosts(item.modelCosts) : (item.points ?? null);
+
+export const getListItemMinimumPoints = (
+  item: DatasheetListItem
+): number | null =>
+  'modelCosts' in item ? getMinimumNumericPoints(item.modelCosts) : numericSummaryPoints(item.points);
+
+const numericSummaryPoints = (points: string | null | undefined): number | null => {
+  const value = points?.replace(/\+$/, '');
+  return value && /^\d+$/.test(value) ? Number(value) : null;
+};
+
+export const filterDatasheetsByCategory = <T extends DatasheetListItem>(
+  datasheets: T[],
+  category: DatasheetCategory
+): T[] => datasheets.filter((item) => getListItemRole(item) === category);
+
+export const filterDatasheetsByKeyword = <T extends DatasheetListItem>(
+  datasheets: T[],
+  keyword: string
+): T[] => datasheets.filter((item) => 'keywords' in item && hasExactKeyword(item, keyword));
+
+/** Stable category-then-name ordering; ties retain catalogue/source order. */
+export const sortDatasheetsByCategory = <T extends DatasheetListItem>(datasheets: T[]): T[] =>
+  datasheets
+    .map((item, index) => ({ item, index }))
+    .sort(
+      (a, b) =>
+        BATTLEFIELD_ROLES.indexOf(getListItemRole(a.item)) -
+          BATTLEFIELD_ROLES.indexOf(getListItemRole(b.item)) ||
+        a.item.name.localeCompare(b.item.name) ||
+        a.index - b.index
+    )
+    .map(({ item }) => item);
