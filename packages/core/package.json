@@ -70,6 +70,11 @@
       "types": "./dist/utils/model-costs.d.ts",
       "import": "./dist/utils/model-costs.js",
       "default": "./dist/utils/model-costs.js"
+    },
+    "./utils/search": {
+      "types": "./dist/utils/search.d.ts",
+      "import": "./dist/utils/search.js",
+      "default": "./dist/utils/search.js"
     }
   },
   "files": [
