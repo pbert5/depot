@@ -105,8 +105,8 @@ const TestWrapper = ({ rosterId, children }: { rosterId?: string; children: Reac
 describe('RosterProvider', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.useFakeTimers();
     mockOfflineStorage.saveRosterToServer.mockResolvedValue(undefined);
+    mockOfflineStorage.saveRosterLocally.mockResolvedValue(undefined);
   });
 
   afterEach(() => {
@@ -200,6 +200,7 @@ describe('RosterProvider', () => {
   });
 
   it('debounces and coalesces roster changes, then reports Saved', async () => {
+    vi.useFakeTimers();
     render(
       <TestWrapper>
         <TestComponent />
@@ -213,8 +214,11 @@ describe('RosterProvider', () => {
     expect(screen.getByTestId('roster-save-status')).toHaveTextContent('Unsaved changes');
     act(() => vi.advanceTimersByTime(749));
     expect(mockOfflineStorage.saveRosterToServer).not.toHaveBeenCalled();
-    act(() => vi.advanceTimersByTime(1));
-    await waitFor(() => expect(mockOfflineStorage.saveRosterToServer).toHaveBeenCalledTimes(1));
+    await act(async () => {
+      vi.advanceTimersByTime(1);
+      await Promise.resolve();
+    });
+    expect(mockOfflineStorage.saveRosterToServer).toHaveBeenCalledTimes(1);
 
     const savedRoster = mockOfflineStorage.saveRosterToServer.mock.calls[0][0];
     expect(savedRoster).toMatchObject({
@@ -223,7 +227,7 @@ describe('RosterProvider', () => {
       factionSlug: 'space-marines',
       points: { current: 0, max: 2000 }
     });
-    await waitFor(() => expect(screen.getByTestId('roster-save-status')).toHaveTextContent('Saved'));
+    expect(screen.getByTestId('roster-save-status')).toHaveTextContent('Saved');
   });
 
   it('should not save initial empty state', () => {
@@ -238,6 +242,7 @@ describe('RosterProvider', () => {
   });
 
   it('keeps edits and exposes failure with bounded retry and manual retry', async () => {
+    vi.useFakeTimers();
     const error = new Error('IndexedDB write failure');
     mockOfflineStorage.saveRosterToServer.mockRejectedValueOnce(error);
     const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
@@ -250,10 +255,15 @@ describe('RosterProvider', () => {
 
     act(() => {
       screen.getByTestId('create-roster').click();
-      vi.advanceTimersByTime(750);
     });
+    act(() => vi.advanceTimersByTime(750));
 
-    await waitFor(() => expect(screen.getByTestId('roster-save-status')).toHaveTextContent('Save failed'));
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    expect(screen.getByTestId('roster-save-status')).toHaveTextContent('Save failed');
     expect(screen.getByTestId('roster-name')).toHaveTextContent('Test Roster');
     expect(screen.getByRole('button', { name: 'Retry' })).toBeInTheDocument();
 
@@ -263,13 +273,18 @@ describe('RosterProvider', () => {
     act(() => {
       screen.getByRole('button', { name: 'Retry' }).click();
     });
-    await waitFor(() => expect(screen.getByTestId('roster-save-status')).toHaveTextContent('Saved'));
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    expect(screen.getByTestId('roster-save-status')).toHaveTextContent('Saved');
     expect(mockOfflineStorage.saveRosterToServer).toHaveBeenCalledTimes(2);
 
     consoleSpy.mockRestore();
   });
 
   it('does not let an out-of-order response acknowledge newer edits', async () => {
+    vi.useFakeTimers();
     const first = deferred<void>();
     const second = deferred<void>();
     mockOfflineStorage.saveRosterToServer.mockReturnValueOnce(first.promise).mockReturnValueOnce(second.promise);
@@ -281,21 +296,29 @@ describe('RosterProvider', () => {
     );
     act(() => {
       screen.getByTestId('create-roster').click();
-      vi.advanceTimersByTime(750);
     });
-    await waitFor(() => expect(mockOfflineStorage.saveRosterToServer).toHaveBeenCalledTimes(1));
+    act(() => vi.advanceTimersByTime(750));
+    expect(mockOfflineStorage.saveRosterToServer).toHaveBeenCalledTimes(1);
 
     act(() => {
       screen.getByTestId('rename-roster').click();
-      vi.advanceTimersByTime(750);
     });
-    await waitFor(() => expect(mockOfflineStorage.saveRosterToServer).toHaveBeenCalledTimes(2));
+    act(() => vi.advanceTimersByTime(750));
+    expect(mockOfflineStorage.saveRosterToServer).toHaveBeenCalledTimes(2);
     expect(screen.getByTestId('roster-save-status')).toHaveTextContent('Saving…');
 
-    act(() => first.resolve());
-    await waitFor(() => expect(screen.getByTestId('roster-save-status')).toHaveTextContent('Saving…'));
-    act(() => second.resolve());
-    await waitFor(() => expect(screen.getByTestId('roster-save-status')).toHaveTextContent('Saved'));
+    await act(async () => {
+      first.resolve();
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    expect(screen.getByTestId('roster-save-status')).toHaveTextContent('Saving…');
+    await act(async () => {
+      second.resolve();
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    expect(screen.getByTestId('roster-save-status')).toHaveTextContent('Saved');
   });
 });
 
