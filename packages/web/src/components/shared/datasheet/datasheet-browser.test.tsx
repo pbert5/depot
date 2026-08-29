@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { DatasheetBrowser } from './datasheet-browser';
 import { TestWrapper } from '@/test/test-utils';
@@ -23,6 +23,10 @@ const keyword = (value: string) => [
 ];
 
 describe('DatasheetBrowser', () => {
+  beforeEach(() => {
+    window.history.replaceState({}, '', '/');
+    sessionStorage.clear();
+  });
   const datasheets = [
     createMockDatasheet({
       id: 'captain',
@@ -175,5 +179,35 @@ describe('DatasheetBrowser', () => {
     expect(screen.queryByTestId('datasheet-search-clear')).not.toBeInTheDocument();
     expect(screen.getByText('Captain')).toBeInTheDocument();
     expect(screen.queryByText('Intercessor Squad')).not.toBeInTheDocument();
+  });
+
+  it('persists catalogue search, category and sort state in the URL', async () => {
+    const roleDatasheets = [
+      createMockDatasheet({ id: 'captain', slug: 'captain', name: 'Captain', keywords: keyword('CHARACTER') }),
+      createMockDatasheet({ id: 'intercessor', slug: 'intercessor-squad', name: 'Intercessor Squad', keywords: keyword('BATTLELINE') })
+    ];
+    render(<TestWrapper><DatasheetBrowser datasheets={roleDatasheets} catalogueMode renderDatasheet={(sheet) => <span>{sheet.name}</span>} /></TestWrapper>);
+
+    fireEvent.change(screen.getByTestId('datasheet-search'), { target: { value: 'capt' } });
+    fireEvent.change(screen.getByTestId('datasheet-sort'), { target: { value: 'points' } });
+    fireEvent.click(screen.getByTestId('datasheet-category-character'));
+
+    await waitFor(() => {
+      expect(window.location.search).toContain('q=capt');
+      expect(window.location.search).toContain('group=character');
+      expect(window.location.search).toContain('sort=points');
+    });
+  });
+
+  it('groups an empty catalogue by category and restores state from the session fallback', async () => {
+    sessionStorage.setItem('depot:datasheet-catalogue-state', JSON.stringify({ q: '', group: 'all', sort: 'name', filter: 'all' }));
+    render(<TestWrapper><DatasheetBrowser datasheets={[
+      createMockDatasheet({ id: 'captain', slug: 'captain', name: 'Captain', keywords: keyword('CHARACTER') }),
+      createMockDatasheet({ id: 'intercessor', slug: 'intercessor-squad', name: 'Intercessor Squad', keywords: keyword('BATTLELINE') })
+    ]} catalogueMode renderDatasheet={(sheet) => <span>{sheet.name}</span>} /></TestWrapper>);
+
+    expect(screen.getByRole('heading', { name: 'Characters' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Battleline' })).toBeInTheDocument();
+    await waitFor(() => expect(window.location.search).not.toContain('q='));
   });
 });

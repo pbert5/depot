@@ -1,4 +1,6 @@
 import { type ReactNode, useEffect, useMemo, useRef, useState } from 'react';
+import { SlidersHorizontal } from 'lucide-react';
+import { useSearchParams } from 'react-router-dom';
 import { sortByName } from '@depot/core/utils/common';
 import {
   BATTLEFIELD_ROLES,
@@ -18,8 +20,10 @@ import {
   shouldResetSupplementSelection,
   sortDatasheetsBySupplementPreference
 } from '@depot/core/utils/datasheets';
+import { getMinimumNumericPoints } from '@depot/core/utils/model-costs';
 import { Grid, Search } from '@/components/ui';
 import PillTabs from '@/components/shared/pill-tabs';
+import Sheet from '@/components/ui/sheet';
 import useDebounce from '@/hooks/use-debounce';
 import { cx } from '@/utils/cx';
 import DatasheetSupplementTabs from './datasheet-supplement-tabs';
@@ -34,9 +38,54 @@ interface DatasheetBrowserProps<T extends DatasheetListItem> {
   filters?: DatasheetVisibilityFilters;
   /** Extra classes on the results list (e.g. bottom gap so a floating chip clears the last card). */
   resultsClassName?: string;
+  /** Enables the richer, stateful catalogue used by add-units routes. */
+  catalogueMode?: boolean;
 }
 
 type RoleTab = 'all' | BattlefieldRole;
+type CatalogueSort = 'name' | 'relevance' | 'points';
+
+const CATALOGUE_SESSION_KEY = 'depot:datasheet-catalogue-state';
+const CATALOGUE_SORTS: { value: CatalogueSort; label: string }[] = [
+  { value: 'relevance', label: 'Relevance' },
+  { value: 'name', label: 'Name' },
+  { value: 'points', label: 'Points' }
+];
+
+const catalogueValue = (value: string | null | undefined, fallback: string) =>
+  value && value.trim() ? value : fallback;
+
+const readCatalogueState = (params: URLSearchParams) => {
+  let session: Record<string, string> = {};
+  try {
+    session = JSON.parse(sessionStorage.getItem(CATALOGUE_SESSION_KEY) ?? '{}') as Record<string, string>;
+  } catch {
+    // Session storage is optional (private browsing and server rendering can reject it).
+  }
+  const read = (key: string, fallback: string) => catalogueValue(params.get(key), catalogueValue(session[key], fallback));
+  return {
+    query: read('q', ''),
+    group: read('group', 'all') as RoleTab,
+    sort: read('sort', 'relevance') as CatalogueSort,
+    filter: read('filter', 'all')
+  };
+};
+
+const searchRelevance = (name: string, query: string): number => {
+  const normalizedName = name.toLocaleLowerCase();
+  const normalizedQuery = query.toLocaleLowerCase();
+  if (normalizedName === normalizedQuery) return 0;
+  if (normalizedName.startsWith(normalizedQuery)) return 1;
+  const words = normalizedName.split(/\s+/);
+  if (words.some((word) => word.startsWith(normalizedQuery))) return 2;
+  return normalizedName.includes(normalizedQuery) ? 3 : 4;
+};
+
+const numericPoints = <T extends DatasheetListItem>(item: T): number => {
+  if ('modelCosts' in item) return getMinimumNumericPoints(item.modelCosts) ?? Number.MAX_SAFE_INTEGER;
+  const points = item.points?.replace(/\+$/, '');
+  return points && /^\d+$/.test(points) ? Number(points) : Number.MAX_SAFE_INTEGER;
+};
 
 const deriveSupplementState = <T extends DatasheetListItem>(
   datasheets: T[],
@@ -97,12 +146,39 @@ export const DatasheetBrowser = <T extends DatasheetListItem>({
   emptyStateMessage = 'No datasheets found.',
   showItemCount = true,
   filters,
-  resultsClassName
+  resultsClassName,
+  catalogueMode = false
 }: DatasheetBrowserProps<T>) => {
-  const [selectedSupplement, setSelectedSupplement] = useState('all');
-  const [selectedRole, setSelectedRole] = useState<RoleTab>('all');
-  const [query, setQuery] = useState('');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const initialCatalogueState = useMemo(() => readCatalogueState(searchParams), [searchParams]);
+  const [selectedSupplement, setSelectedSupplement] = useState(() =>
+    catalogueMode ? initialCatalogueState.filter : 'all'
+  );
+  const [selectedRole, setSelectedRole] = useState<RoleTab>(() =>
+    catalogueMode ? initialCatalogueState.group : 'all'
+  );
+  const [query, setQuery] = useState(() => (catalogueMode ? initialCatalogueState.query : ''));
+  const [catalogueSort, setCatalogueSort] = useState<CatalogueSort>(() =>
+    catalogueMode ? initialCatalogueState.sort : 'name'
+  );
+  const [mobileControlsOpen, setMobileControlsOpen] = useState(false);
   const debouncedQuery = useDebounce(query, 300);
+
+  useEffect(() => {
+    if (!catalogueMode) return;
+    const values = { q: query, group: selectedRole, sort: catalogueSort, filter: selectedSupplement };
+    try {
+      sessionStorage.setItem(CATALOGUE_SESSION_KEY, JSON.stringify(values));
+    } catch {
+      // URL state remains the durable fallback when session storage is unavailable.
+    }
+    const next = new URLSearchParams(searchParams);
+    for (const [key, value] of Object.entries(values)) {
+      if (value && value !== 'all' && !(key === 'sort' && value === 'relevance')) next.set(key, value);
+      else next.delete(key);
+    }
+    if (next.toString() !== searchParams.toString()) setSearchParams(next, { replace: true });
+  }, [catalogueMode, catalogueSort, query, selectedRole, selectedSupplement, searchParams, setSearchParams]);
 
   const supplement = useMemo(
     () => deriveSupplementState(datasheets, filters, selectedSupplement),
@@ -149,12 +225,17 @@ export const DatasheetBrowser = <T extends DatasheetListItem>({
     const matches = normalizedQuery
       ? filteredBySettings.filter((sheet) => sheet.name.toLowerCase().includes(normalizedQuery))
       : filteredBySettings;
-    return sortDatasheetsBySupplementPreference(
-      sortByName(matches),
-      supplement.selected,
-      supplement.hasSupplements
-    );
-  }, [filteredBySettings, normalizedQuery, supplement.selected, supplement.hasSupplements]);
+    if (!catalogueMode) {
+      return sortDatasheetsBySupplementPreference(sortByName(matches), supplement.selected, supplement.hasSupplements);
+    }
+    return [...matches].sort((a, b) => {
+      if (catalogueSort === 'points') return numericPoints(a) - numericPoints(b) || a.name.localeCompare(b.name);
+      if (catalogueSort === 'relevance' && normalizedQuery) {
+        return searchRelevance(a.name, normalizedQuery) - searchRelevance(b.name, normalizedQuery) || a.name.localeCompare(b.name);
+      }
+      return a.name.localeCompare(b.name);
+    });
+  }, [catalogueMode, catalogueSort, filteredBySettings, normalizedQuery, supplement.selected, supplement.hasSupplements]);
 
   const renderItem: (datasheet: T) => ReactNode =
     renderDatasheet ??
@@ -169,7 +250,7 @@ export const DatasheetBrowser = <T extends DatasheetListItem>({
   // picker) stay a flat list. Manifests generated before `role` existed report
   // everything as "other"; stay unfiltered rather than showing one meaningless pill.
   const roleTabs = useMemo(() => {
-    if (renderDatasheet) return null;
+    if (renderDatasheet && !catalogueMode) return null;
     if (!searchedDatasheets.some((sheet) => getListItemRole(sheet) !== 'other')) return null;
 
     const counts = new Map<BattlefieldRole, number>();
@@ -186,12 +267,13 @@ export const DatasheetBrowser = <T extends DatasheetListItem>({
         count: counts.get(role)!
       }))
     ];
-  }, [renderDatasheet, searchedDatasheets]);
+  }, [catalogueMode, renderDatasheet, searchedDatasheets]);
 
   const visibleDatasheets = useMemo(() => {
-    if (!roleTabs || selectedRole === 'all') return searchedDatasheets;
+    if (!catalogueMode && (!roleTabs || selectedRole === 'all')) return searchedDatasheets;
+    if (selectedRole === 'all') return searchedDatasheets;
     return searchedDatasheets.filter((sheet) => getListItemRole(sheet) === selectedRole);
-  }, [roleTabs, selectedRole, searchedDatasheets]);
+  }, [catalogueMode, roleTabs, selectedRole, searchedDatasheets]);
 
   const emptyMessage = debouncedQuery
     ? 'No datasheets found matching your filters.'
@@ -202,6 +284,49 @@ export const DatasheetBrowser = <T extends DatasheetListItem>({
       {renderItem(datasheet)}
     </div>
   ));
+
+  const categoryTabs = roleTabs ?? [];
+  const catalogueControls = catalogueMode ? (
+    <>
+      <div className="hidden md:block">
+        <PillTabs tabs={categoryTabs} active={selectedRole} onChange={setSelectedRole} ariaLabel="Datasheet categories" testIdPrefix="datasheet-category" />
+      </div>
+      <div className="flex items-center gap-2 md:hidden">
+        <button
+          type="button"
+          className="flex min-h-11 flex-1 items-center justify-center gap-2 rounded-sm border border-border-subtle bg-surface-muted px-3 text-sm font-medium text-foreground focus-ring-primary"
+          onClick={() => setMobileControlsOpen(true)}
+          aria-haspopup="dialog"
+          data-testid="datasheet-catalogue-controls"
+        >
+          <SlidersHorizontal size={16} /> Filters & sorting
+        </button>
+        <span className="text-xs text-subtle">{visibleDatasheets.length} shown</span>
+      </div>
+      <div className="hidden items-center gap-2 md:flex">
+        <label className="text-sm text-subtle" htmlFor="datasheet-sort">Sort</label>
+        <select id="datasheet-sort" className="input-base w-auto" value={catalogueSort} onChange={(event) => setCatalogueSort(event.target.value as CatalogueSort)} data-testid="datasheet-sort">
+          {CATALOGUE_SORTS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+        </select>
+      </div>
+      <Sheet open={mobileControlsOpen} onClose={() => setMobileControlsOpen(false)} title="Catalogue filters" data-testid="datasheet-catalogue-sheet">
+        <div className="flex flex-col gap-4">
+          <PillTabs tabs={categoryTabs} active={selectedRole} onChange={setSelectedRole} ariaLabel="Datasheet categories" testIdPrefix="datasheet-mobile-category" />
+          <label className="flex flex-col gap-1 text-sm font-medium text-foreground" htmlFor="datasheet-mobile-sort">
+            Sort
+            <select id="datasheet-mobile-sort" className="input-base" value={catalogueSort} onChange={(event) => setCatalogueSort(event.target.value as CatalogueSort)} data-testid="datasheet-mobile-sort">
+              {CATALOGUE_SORTS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+            </select>
+          </label>
+          <button type="button" className="min-h-11 rounded-sm bg-accent px-3 font-medium text-white focus-ring-primary" onClick={() => setMobileControlsOpen(false)}>Show results</button>
+        </div>
+      </Sheet>
+    </>
+  ) : null;
+
+  const groupedResults = catalogueMode && !normalizedQuery && selectedRole === 'all'
+    ? BATTLEFIELD_ROLES.map((role) => ({ role, items: visibleDatasheets.filter((sheet) => getListItemRole(sheet) === role) })).concat([{ role: 'other' as const, items: visibleDatasheets.filter((sheet) => getListItemRole(sheet) === 'other') }]).filter((group) => group.items.length > 0)
+    : null;
 
   return (
     <div className="flex flex-col gap-2">
@@ -238,6 +363,7 @@ export const DatasheetBrowser = <T extends DatasheetListItem>({
             testIdPrefix="datasheet-role"
           />
         ) : null}
+        {catalogueControls}
         {showItemCount ? (
           <span className="text-sm text-subtle">
             Showing {visibleDatasheets.length} of {filteredBySettings.length} datasheets
@@ -254,7 +380,7 @@ export const DatasheetBrowser = <T extends DatasheetListItem>({
             id="datasheet-results"
             data-testid="datasheet-results"
           >
-            {resultItems}
+            {groupedResults ? groupedResults.map((group) => <section key={group.role} className="flex flex-col gap-2" aria-labelledby={`datasheet-group-${group.role}`}><h2 id={`datasheet-group-${group.role}`} className="pt-2 text-sm font-semibold uppercase tracking-wide text-subtle">{BATTLEFIELD_ROLE_LABELS[group.role]}</h2>{group.items.map((datasheet) => <div key={datasheet.slug} id={datasheet.id}>{renderItem(datasheet)}</div>)}</section>) : resultItems}
           </div>
         ) : (
           <Grid

@@ -142,6 +142,7 @@ const AddUnitsView: FC<AddUnitsViewProps> = ({
               searchPlaceholder="Search by unit name..."
               emptyStateMessage="No units available for this faction."
               filters={datasheetFilters}
+              catalogueMode
               resultsClassName={hasSelections ? 'pb-28 md:pb-24' : undefined}
               renderDatasheet={(datasheet) => (
                 <DatasheetSelectionCard
