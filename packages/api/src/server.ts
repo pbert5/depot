@@ -105,11 +105,14 @@ async function handle(req: IncomingMessage, res: ServerResponse) {
   if (url.pathname === '/api/import' && req.method === 'POST') {
     const raw = await readBody(req);
     const parsed = typeof raw === 'object' && raw && 'content' in raw ? (raw as { content: string; format?: string }) : raw;
-    const source = typeof parsed === 'string' ? parseYaml(parsed) : typeof parsed === 'object' && parsed && 'format' in parsed && (parsed as { format?: string }).format === 'yaml' ? parseYaml((parsed as unknown as { content: string }).content) : parsed;
+    const source = typeof parsed === 'string' ? parseYaml(parsed, { schema: 'core' }) : typeof parsed === 'object' && parsed && 'format' in parsed && (parsed as { format?: string }).format === 'yaml' ? parseYaml((parsed as unknown as { content: string }).content, { schema: 'core' }) : parsed;
     if (!source || typeof source !== 'object' || (source as Record<string, unknown>).format !== format || (source as Record<string, unknown>).formatVersion !== schemaVersion) throw new Error('unsupported depot export format or version');
-    const input = source as { rosters?: unknown[]; collections?: unknown[] };
-    const rosters = (input.rosters ?? []).map(validateDocument); const collections = (input.collections ?? []).map(validateDocument);
-    const policy = url.searchParams.get('conflict') === 'create' ? 'create' : 'replace';
+    const input = source as { rosters?: unknown; collections?: unknown };
+    if (!Array.isArray(input.rosters) || !Array.isArray(input.collections)) throw new Error('export must contain rosters and collections arrays');
+    const rosters = input.rosters.map(validateDocument); const collections = input.collections.map(validateDocument);
+    const requestedPolicy = url.searchParams.get('conflict') ?? 'replace';
+    if (requestedPolicy !== 'create' && requestedPolicy !== 'replace') throw new Error('conflict policy must be create or replace');
+    const policy = requestedPolicy;
     const client = await pool.connect();
     try { await client.query('BEGIN'); for (const doc of rosters) await put(client, 'rosters', doc, policy); for (const doc of collections) await put(client, 'collections', doc, policy); await client.query('COMMIT'); return json(res, 200, { rosters: rosters.length, collections: collections.length }); }
     catch (error) { await client.query('ROLLBACK'); throw error; } finally { client.release(); }

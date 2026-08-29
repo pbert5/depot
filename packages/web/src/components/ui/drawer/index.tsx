@@ -10,6 +10,7 @@ interface DrawerProps {
   /** `bottom` renders a sheet sliding up from the bottom edge. */
   position?: 'right' | 'bottom';
   'data-testid'?: string;
+  'aria-label'?: string;
 }
 
 /**
@@ -24,7 +25,8 @@ const Drawer: FC<DrawerProps> = ({
   children,
   className,
   position = 'right',
-  'data-testid': testId
+  'data-testid': testId,
+  'aria-label': ariaLabel
 }) => {
   const ref = useRef<HTMLDialogElement>(null);
   // Bumped on each open so children (forms) remount and reset, as they did when
@@ -50,6 +52,7 @@ const Drawer: FC<DrawerProps> = ({
     <dialog
       ref={ref}
       data-testid={testId}
+      aria-label={ariaLabel}
       onClose={() => onClose?.()}
       onClick={(event) => {
         if (event.target === event.currentTarget) onClose?.();

@@ -1,4 +1,5 @@
 import type { depot } from '@depot/core';
+import { useEffect } from 'react';
 import { offlineStorage } from '@/data/offline-storage';
 import { createRosterDuplicate } from '@depot/core/utils/roster';
 import { useFactionsContext } from '@/contexts/factions/context';
@@ -22,6 +23,12 @@ function useRosters(): UseRosters {
       stored.map((roster) => hydrateRoster(roster, { getDatasheet, getFactionManifest }))
     );
   }, [getDatasheet, getFactionManifest]);
+
+  useEffect(() => {
+    const handleChange = () => void refresh();
+    window.addEventListener('depot:user-data-changed', handleChange);
+    return () => window.removeEventListener('depot:user-data-changed', handleChange);
+  }, [refresh]);
 
   const deleteRoster = async (rosterId: string) => {
     await offlineStorage.deleteRoster(rosterId);
