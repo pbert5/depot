@@ -130,7 +130,7 @@ export const RosterProvider: FC<RosterProviderProps> = ({ children, rosterId }) 
   };
 
   // `dispatch` is stable, so the action set is created once.
-  const actions = useMemo<Omit<RosterContextValue, 'state'>>(
+  const actions = useMemo<Omit<RosterContextValue, 'state' | 'saveState' | 'retrySave'>>(
     () => ({
       createRoster: (payload) => {
         const id = crypto.randomUUID();
