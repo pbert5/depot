@@ -24,6 +24,6 @@ export const downloadFile = (
 
 export const isoDate = (date = new Date()) => date.toISOString().slice(0, 10);
 
-export const isoTimestamp = (date = new Date()) => date.toISOString().replace(/[:.]/g, '').replace(/\d{3}Z$/, 'Z');
+export const isoTimestamp = (date = new Date()) => date.toISOString().replace(/[-:.]/g, '').replace(/\d{3}Z$/, 'Z');
 
 export const readJsonFile = async <T>(file: File): Promise<T> => JSON.parse(await file.text()) as T;
