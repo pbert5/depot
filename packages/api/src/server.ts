@@ -105,7 +105,16 @@ async function handle(req: IncomingMessage, res: ServerResponse) {
   if (url.pathname === '/api/import' && req.method === 'POST') {
     const raw = await readBody(req);
     const parsed = typeof raw === 'object' && raw && 'content' in raw ? (raw as { content: string; format?: string }) : raw;
-    const source = typeof parsed === 'string' ? parseYaml(parsed, { schema: 'core' }) : typeof parsed === 'object' && parsed && 'format' in parsed && (parsed as { format?: string }).format === 'yaml' ? parseYaml((parsed as unknown as { content: string }).content, { schema: 'core' }) : parsed;
+    let source: unknown;
+    try {
+      source = typeof parsed === 'string'
+        ? parseYaml(parsed, { schema: 'core' })
+        : typeof parsed === 'object' && parsed && 'format' in parsed && (parsed as { format?: string }).format === 'yaml'
+          ? parseYaml((parsed as unknown as { content: string }).content, { schema: 'core' })
+          : parsed;
+    } catch {
+      throw new Error('invalid YAML backup');
+    }
     if (!source || typeof source !== 'object' || (source as Record<string, unknown>).format !== format || (source as Record<string, unknown>).formatVersion !== schemaVersion) throw new Error('unsupported depot export format or version');
     const input = source as { rosters?: unknown; collections?: unknown };
     if (!Array.isArray(input.rosters) || !Array.isArray(input.collections)) throw new Error('export must contain rosters and collections arrays');
