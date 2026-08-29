@@ -47,6 +47,11 @@ services:
     init: true
     ports:
       - "127.0.0.1:${DEPOT_PORT:-19096}:80"
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "--quiet", "http://127.0.0.1/"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
 
   depot-test:
     build:
@@ -55,6 +60,19 @@ services:
     profiles: ["test"]
     init: true
     working_dir: /app
+
+  depot-e2e:
+    build:
+      context: .
+      dockerfile: Dockerfile.test
+    profiles: ["e2e"]
+    init: true
+    working_dir: /app
+    environment:
+      WEB_BASE_URL: "http://web"
+    depends_on:
+      web:
+        condition: service_healthy
 
   chrome-devtools-mcp:
     build:

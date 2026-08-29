@@ -1,0 +1,5 @@
+services:
+  # E2E reaches the production web service over the isolated Compose network.
+  # Do not bind the standalone application's host port for this project.
+  web:
+    ports: !reset []

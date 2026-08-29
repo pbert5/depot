@@ -410,7 +410,15 @@ class OfflineStorage {
     }
     try {
       const store = await this.store(STORES.ROSTERS);
-      return ((await req(store.get(rosterId))) as depot.StoredRoster | undefined) ?? null;
+      for (let attempt = 0; attempt < 10; attempt += 1) {
+        const stored = (await req(store.get(rosterId))) as depot.StoredRoster | undefined;
+        if (stored) return stored;
+        // A newly-created roster is staged locally immediately while its
+        // debounced API save runs. Allow the detail route to observe that
+        // write when it mounts in the same navigation turn.
+        await new Promise((resolve) => setTimeout(resolve, 25));
+      }
+      return null;
     } catch (error) {
       console.error(`Failed to get roster ${rosterId} from IndexedDB:`, error);
       return null;

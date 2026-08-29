@@ -8,6 +8,7 @@ import { useFactionsContext } from '@/contexts/factions/context';
 import { offlineStorage } from '@/data/offline-storage';
 import { useToast } from '@/contexts/toast/context';
 import { sortByName } from '@depot/core/utils/common';
+import { createId } from '@/utils/id';
 
 interface Props {
   open: boolean;
@@ -36,7 +37,7 @@ const CreateCollectionForm: React.FC<{ onClose: () => void }> = ({ onClose }) =>
     }
 
     const collection: depot.Collection = {
-      id: crypto.randomUUID(),
+      id: createId(),
       name: name.trim(),
       factionId: faction.id,
       factionSlug: faction.slug,

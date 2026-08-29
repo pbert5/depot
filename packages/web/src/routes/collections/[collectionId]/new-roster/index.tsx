@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { useNavigate } from '@/lib/navigation';
+import { createId } from '@/utils/id';
 import { Plus } from 'lucide-react';
 import type { depot } from '@depot/core';
 
@@ -60,7 +61,7 @@ const CollectionNewRoster: React.FC = () => {
   );
 
   const selectedRosterUnits: depot.RosterUnit[] = useMemo(
-    () => selectedUnits.map((item) => ({ ...item, id: crypto.randomUUID() })),
+    () => selectedUnits.map((item) => ({ ...item, id: createId() })),
     [selectedUnits]
   );
 

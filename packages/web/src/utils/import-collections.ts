@@ -1,5 +1,6 @@
 import type { depot } from '@depot/core';
 import { calculateCollectionPoints } from '@depot/core/utils/collection';
+import { createId } from '@/utils/id';
 
 import { readJsonFile } from '@/utils/file';
 import { isExportedCollection } from '@/types/export';
@@ -28,12 +29,12 @@ export type ImportCollectionsDeps = {
 export const remapCollectionIds = (collection: depot.Collection): depot.Collection => {
   const items = collection.items.map((item) => ({
     ...item,
-    id: crypto.randomUUID()
+    id: createId()
   }));
 
   return {
     ...collection,
-    id: crypto.randomUUID(),
+    id: createId(),
     items,
     dataVersion: collection.dataVersion ?? null,
     points: { current: calculateCollectionPoints({ ...collection, items }) }

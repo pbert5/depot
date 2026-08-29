@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { useNavigate } from '@/lib/navigation';
+import { createId } from '@/utils/id';
 import { Plus, ClipboardPlus, Download, RefreshCw } from 'lucide-react';
 import type { depot } from '@depot/core';
 
@@ -142,7 +143,7 @@ const CollectionPageContent: React.FC<{ collectionId?: string }> = ({ collection
     if (!source) return;
     await save({
       ...collection,
-      items: [...collection.items, { ...source, id: crypto.randomUUID() }]
+      items: [...collection.items, { ...source, id: createId() }]
     });
   };
 

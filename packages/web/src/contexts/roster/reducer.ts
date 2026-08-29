@@ -9,6 +9,7 @@ import type { RosterState, RosterAction } from './types';
 import { initialState } from './constants';
 import { calculateTotalPoints, getRosterDetachments } from '@depot/core/utils/roster';
 import { enforceCostBrackets } from '@depot/core/utils/roster-legality';
+import { createId } from '@/utils/id';
 
 type UnitLike = Pick<
   depot.RosterUnit,
@@ -86,7 +87,7 @@ export const rosterReducer = (state: RosterState, action: RosterAction): RosterS
     case 'ADD_UNIT': {
       const normalizedDatasheet = normalizeDatasheetWargear(action.payload.datasheet);
       const newUnit: depot.RosterUnit = {
-        id: crypto.randomUUID(),
+        id: createId(),
         datasheet: normalizedDatasheet,
         modelCost: action.payload.modelCost,
         selectedWargear: getDefaultWargearSelection(normalizedDatasheet),
@@ -99,7 +100,7 @@ export const rosterReducer = (state: RosterState, action: RosterAction): RosterS
     case 'DUPLICATE_UNIT':
       return finalize({
         ...state,
-        units: [...state.units, { ...action.payload.unit, id: crypto.randomUUID() }]
+        units: [...state.units, { ...action.payload.unit, id: createId() }]
       });
 
     case 'REMOVE_UNIT':

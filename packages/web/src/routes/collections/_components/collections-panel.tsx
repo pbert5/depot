@@ -10,6 +10,7 @@ import LibraryCard from '@/components/shared/library-card';
 import { RosterEmptyState } from '@/components/shared/roster';
 import { offlineStorage } from '@/data/offline-storage';
 import { calculateCollectionPoints } from '@depot/core/utils/collection';
+import { createId } from '@/utils/id';
 import { getCollectionsSnapshotCopy, getReadyPercent } from '@/utils/collection';
 import {
   formatCollectionImportToast,
@@ -58,9 +59,9 @@ const CollectionsPanel: React.FC<{ children: (slots: Slots) => ReactNode }> = ({
       const currentDataVersion = dataVersion ?? null;
       const duplicated: depot.Collection = {
         ...collection,
-        id: crypto.randomUUID(),
+        id: createId(),
         name: `${collection.name} Copy`,
-        items: collection.items.map((item) => ({ ...item, id: crypto.randomUUID() })),
+        items: collection.items.map((item) => ({ ...item, id: createId() })),
         dataVersion: currentDataVersion ?? collection.dataVersion ?? null,
         points: { current: calculateCollectionPoints(collection) }
       };

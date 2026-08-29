@@ -35,7 +35,7 @@ describe('search', () => {
   it('uses controlled fuzzy fallback and deterministic tie breaks', () => {
     expect(searchItems(units, 'truk').map((unit) => unit.name)).toEqual(['Trukk']);
     expect(searchItems(units, 'ork', { getMetadata: (unit) => ({ faction: unit.faction }) }).map((unit) => unit.name)).toEqual(
-      ['Battlewagon', 'Beast Snagga Boyz', 'Boyz', 'Deff Dread', 'Gorkanaut', 'Meganobz', 'Trukk', 'Warboss']
+      ['Gorkanaut', 'Battlewagon', 'Beast Snagga Boyz', 'Boyz', 'Deff Dread', 'Meganobz', 'Trukk', 'Warboss']
     );
     expect(rankSearch(units, 'transport', { getMetadata: (unit) => ({ role: unit.role }) }).map((result) => result.item.name)).toEqual([
       'Battlewagon',

@@ -1,5 +1,6 @@
 import { useState, useMemo, useCallback } from 'react';
 import type { depot } from '@depot/core';
+import { createId } from '@/utils/id';
 
 export interface SelectedUnit {
   datasheet: depot.Datasheet;
@@ -27,7 +28,7 @@ export const useRosterUnitSelection = (): UseRosterUnitSelectionResult => {
   }, [selectedUnits]);
 
   const addToSelection = useCallback((datasheet: depot.Datasheet, modelCost: depot.ModelCost) => {
-    setSelectedUnits((prev) => [...prev, { datasheet, modelCost, id: crypto.randomUUID() }]);
+    setSelectedUnits((prev) => [...prev, { datasheet, modelCost, id: createId() }]);
   }, []);
 
   const removeLatestUnit = useCallback((datasheet: depot.Datasheet, modelCost: depot.ModelCost) => {

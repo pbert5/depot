@@ -6,6 +6,7 @@ import { hydrateRoster } from '@/utils/refresh-user-data';
 import type { RosterContextValue, RosterSaveState } from './types';
 import { rosterReducer } from './reducer';
 import { initialState } from './constants';
+import { createId } from '@/utils/id';
 
 export const RosterContext = createContext<RosterContextValue | undefined>(undefined);
 
@@ -133,8 +134,23 @@ export const RosterProvider: FC<RosterProviderProps> = ({ children, rosterId }) 
   const actions = useMemo<Omit<RosterContextValue, 'state' | 'saveState' | 'retrySave'>>(
     () => ({
       createRoster: (payload) => {
-        const id = crypto.randomUUID();
-        dispatch({ type: 'CREATE_ROSTER', payload: { ...payload, id } });
+        const id = createId();
+        const roster = {
+          ...payload,
+          id,
+          units: payload.units ?? [],
+          collectionId: payload.collectionId ?? null,
+          points: { current: 0, max: payload.maxPoints },
+          enhancements: [],
+          warlordUnitId: null
+        };
+        dispatch({ type: 'CREATE_ROSTER', payload: roster });
+        // Make the newly created document available to the detail route before
+        // the debounced server save completes. This matters on plain HTTP
+        // Compose service URLs, where the route can mount immediately.
+        void offlineStorage.saveRosterLocally(roster).catch((error: unknown) => {
+          console.error(`Failed to keep new roster draft ${id}:`, error);
+        });
         return id;
       },
       updateRosterDetails: (payload) => dispatch({ type: 'UPDATE_DETAILS', payload }),

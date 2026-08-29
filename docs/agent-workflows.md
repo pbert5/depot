@@ -12,6 +12,10 @@ docker compose --profile test run --rm depot-test pnpm typecheck
 docker compose --profile test run --rm depot-test pnpm build
 docker compose --profile test run --rm depot-test pnpm --filter @depot/web test:e2e
 docker compose run --rm --no-deps -T chrome-devtools-mcp
+
+# Isolated production-web E2E project (removes only its own resources)
+docker compose -p depot-e2e -f compose.yaml -f compose.e2e.yaml --profile e2e run --rm depot-e2e pnpm --filter @depot/web test:e2e
+docker compose -p depot-e2e -f compose.yaml -f compose.e2e.yaml down -v
 ```
 
 Use Chrome DevTools MCP for actual DOM, focus, console, network, interaction,

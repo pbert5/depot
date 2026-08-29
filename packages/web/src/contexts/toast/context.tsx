@@ -1,5 +1,6 @@
 import type { FC, ReactNode } from 'react';
 import { createContext, useCallback, useContext, useState } from 'react';
+import { createId } from '@/utils/id';
 
 export type ToastType = 'success' | 'error' | 'warning' | 'info';
 
@@ -29,7 +30,7 @@ export const ToastProvider: FC<{ children: ReactNode }> = ({ children }) => {
 
   const showToast = useCallback(
     (toast: Omit<Toast, 'id'>) => {
-      const id = crypto.randomUUID();
+      const id = createId();
       setToasts((prev) => [...prev, { id, ...toast }]);
       setTimeout(() => removeToast(id), AUTO_DISMISS_MS);
     },
