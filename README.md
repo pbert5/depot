@@ -46,6 +46,24 @@ See `AGENTS.md` files (root and per-package) for deeper guidance.
 
 ## Running the App
 
+### Standalone Docker Compose
+
+The repository includes a self-contained Compose stack with the web app, API,
+and PostgreSQL persistence:
+
+```bash
+cp .env.example .env
+# Edit .env and set DEPOT_POSTGRES_PASSWORD.
+docker compose up --build -d
+```
+
+Open <http://127.0.0.1:19096>, or use the port configured by `DEPOT_PORT`.
+The API and database are private to the Compose network. PostgreSQL data is
+stored in the `depot-db-data` named volume and survives container recreation.
+
+Stop the stack with `docker compose down`; add `-v` only when intentionally
+deleting the database volume.
+
 ### One-command dev (recommended)
 
 ```bash
