@@ -232,24 +232,26 @@ const RosterView: FC = () => {
         }
       ]}
       footer={
-        <Button
-          variant="secondary"
-          fullWidth
-          onClick={handleExportJson}
-          data-testid="export-button"
-        >
-          <Download size={16} />
-          Export JSON
-        </Button>
-        <Button
-          variant="secondary"
-          fullWidth
-          onClick={() => void handleExportYaml()}
-          data-testid="export-yaml-button"
-        >
-          <Download size={16} />
-          Export YAML
-        </Button>
+        <div className="flex flex-col gap-2">
+          <Button
+            variant="secondary"
+            fullWidth
+            onClick={handleExportJson}
+            data-testid="export-button"
+          >
+            <Download size={16} />
+            Export JSON
+          </Button>
+          <Button
+            variant="secondary"
+            fullWidth
+            onClick={() => void handleExportYaml()}
+            data-testid="export-yaml-button"
+          >
+            <Download size={16} />
+            Export YAML
+          </Button>
+        </div>
       }
     >
       <div className="flex flex-col gap-3">
