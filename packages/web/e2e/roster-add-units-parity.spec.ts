@@ -56,6 +56,8 @@ test.describe('Roster add units parity', () => {
     await expect(item).toContainText(/Archon/);
     await expect(item).toContainText(/\d+ pts/);
     await expect(item.getByText('2', { exact: true })).toBeVisible();
+    const cost = Number((await item.textContent())?.match(/(\d+) pts/)?.[1]);
+    await expect(summary).toContainText(`2 units • ${cost * 2} pts`);
   });
 
   test('removes one selection while leaving another', async ({ page }) => {
