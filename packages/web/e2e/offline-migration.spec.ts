@@ -119,8 +119,8 @@ const readClientState = (page: Page) =>
             db.close();
             resolve({
               version: db.version,
-              roster: rosterRequest.result,
-              collection: collectionRequest.result,
+              roster: rosterRequest.result && (({ profileId: _profileId, ...value }) => value)(rosterRequest.result),
+              collection: collectionRequest.result && (({ profileId: _profileId, ...value }) => value)(collectionRequest.result),
               marker: markerRequest.result
             });
           };

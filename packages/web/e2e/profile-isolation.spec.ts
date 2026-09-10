@@ -15,8 +15,14 @@ test('reset only deletes the current worker profile documents', async ({ page })
     return (await response.json() as { id: string }).id;
   });
   const document = (id: string) => ({ id, name: id, factionId: 'space-marines' });
-  await page.evaluate(async ({ profile, doc }) => { await fetch('/api/rosters', { method: 'POST', headers: { 'content-type': 'application/json', 'x-depot-profile-id': profile }, body: JSON.stringify(doc) }); }, { profile: workerProfile.id, doc: document('worker-a-document') });
-  await page.evaluate(async ({ profile, doc }) => { await fetch('/api/rosters', { method: 'POST', headers: { 'content-type': 'application/json', 'x-depot-profile-id': profile }, body: JSON.stringify(doc) }); }, { profile: otherProfile, doc: document('worker-b-document') });
+  await page.evaluate(async ({ profile, doc }) => {
+    const response = await fetch(`/api/rosters/${doc.id}`, { method: 'PUT', headers: { 'content-type': 'application/json', 'x-depot-profile-id': profile }, body: JSON.stringify(doc) });
+    if (!response.ok) throw new Error(`worker A seed failed: ${response.status}`);
+  }, { profile: workerProfile.id, doc: document('worker-a-document') });
+  await page.evaluate(async ({ profile, doc }) => {
+    const response = await fetch(`/api/rosters/${doc.id}`, { method: 'PUT', headers: { 'content-type': 'application/json', 'x-depot-profile-id': profile }, body: JSON.stringify(doc) });
+    if (!response.ok) throw new Error(`worker B seed failed: ${response.status}`);
+  }, { profile: otherProfile, doc: document('worker-b-document') });
   await resetClientState(page);
   const remaining = await page.evaluate(async (profile) => (await fetch('/api/rosters', { headers: { 'x-depot-profile-id': profile } })).json(), otherProfile);
   expect(remaining).toEqual([expect.objectContaining({ id: 'worker-b-document' })]);
