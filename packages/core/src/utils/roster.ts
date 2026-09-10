@@ -1,5 +1,6 @@
 import type { DetachmentRef, Roster } from '../types/depot.js';
 import { toTitleCase } from './datasheets.js';
+import { createId } from './id.js';
 
 /** Selected detachments, falling back to the legacy single `detachment` field. */
 export const getRosterDetachments = <T extends DetachmentRef>(roster: {
@@ -23,10 +24,10 @@ export const calculateTotalPoints = (roster: Roster): number =>
 
 /** Fresh roster + unit ids, with enhancement/warlord references remapped to the new unit ids. */
 export const remapRosterIds = (roster: Roster): Roster => {
-  const unitIds = new Map(roster.units.map((unit) => [unit.id, crypto.randomUUID()]));
+  const unitIds = new Map(roster.units.map((unit) => [unit.id, createId()]));
   return {
     ...roster,
-    id: crypto.randomUUID(),
+    id: createId(),
     units: roster.units.map((unit) => ({ ...unit, id: unitIds.get(unit.id)! })),
     // Drop enhancements whose unit is missing — imports are untrusted files.
     enhancements: roster.enhancements.flatMap((entry) => {

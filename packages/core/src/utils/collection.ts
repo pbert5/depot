@@ -6,6 +6,7 @@ import type {
   ModelCost
 } from '../types/depot.js';
 import { getDefaultWargearSelection } from './wargear.js';
+import { createId } from './id.js';
 
 export const COLLECTION_UNIT_STATES: CollectionUnitState[] = [
   'sprue',
@@ -37,7 +38,7 @@ export const createCollectionUnitFromDatasheet = (
   datasheet: Datasheet,
   modelCost: ModelCost
 ): CollectionUnit => ({
-  id: crypto.randomUUID(),
+  id: createId(),
   datasheet,
   modelCost,
   selectedWargear: getDefaultWargearSelection(datasheet),
