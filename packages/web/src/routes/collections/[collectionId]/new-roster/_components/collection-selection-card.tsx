@@ -24,8 +24,20 @@ const CollectionSelectionCard: FC<CollectionSelectionCardProps> = ({
       dataTestId={`collection-selection-${unit.id}`}
       className={selected ? 'border-border-accent bg-surface-accent' : undefined}
       actions={
-        // Click bubbles to the card's onClick, which toggles.
-        <Button size="sm" variant={selected ? 'secondary' : 'accent'}>
+        <Button
+          type="button"
+          size="sm"
+          variant={selected ? 'secondary' : 'accent'}
+          aria-label={`${selected ? 'Remove' : 'Select'} ${unit.datasheet.name} ${selected ? 'from' : 'for'} roster`}
+          aria-pressed={selected}
+          data-testid={`collection-selection-toggle-${unit.id}`}
+          onClick={(event) => {
+            // The card remains a generous touch target, while the button gives
+            // keyboard and assistive-technology users an explicit toggle.
+            event.stopPropagation();
+            onToggle(unit.id);
+          }}
+        >
           {selected ? 'Selected' : 'Add'}
         </Button>
       }

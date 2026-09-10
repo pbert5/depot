@@ -33,6 +33,17 @@ const CollectionNewRoster: React.FC = () => {
   const [isSummaryOpen, setIsSummaryOpen] = useState(false);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
 
+  // Keep selected units across search/category transitions. Only discard an
+  // id when the backing collection itself changes and no longer contains it.
+  useEffect(() => {
+    if (!collection) return;
+    const availableIds = new Set(collection.items.map((item) => item.id));
+    setSelectedIds((previous) => {
+      const next = new Set([...previous].filter((id) => availableIds.has(id)));
+      return next.size === previous.size ? previous : next;
+    });
+  }, [collection]);
+
   const pageTitle = collection
     ? `${collection.name} - Build Roster`
     : 'Build Roster from Collection';
