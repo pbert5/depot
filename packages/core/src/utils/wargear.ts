@@ -2,8 +2,15 @@ import { createSlugGenerator } from './slug.js';
 import type { Datasheet, Wargear, WargearProfile } from '../types/depot.js';
 import type { DatasheetWargear } from '../types/wahapedia.js';
 
-export { parseWargearRules } from './wargear-rules.js';
+export { evaluateEquipment, parseWargearRules, transitionEquipment } from './wargear-rules.js';
 export type {
+  EquipmentActionState,
+  EquipmentCounts,
+  EquipmentEvaluation,
+  EquipmentInput,
+  EquipmentIssue,
+  EquipmentIssueCode,
+  EquipmentTransition,
   ParsedWargearRules,
   WargearChoice,
   WargearConflictRule,
