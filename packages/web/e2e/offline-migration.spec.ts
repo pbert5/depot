@@ -114,7 +114,7 @@ const readClientState = (page: Page) =>
           const collectionRequest = transaction
             .objectStore('scopedCollections')
             .get('00000000-0000-0000-0000-000000000001:migration-collection-22222222');
-          const markerRequest = transaction.objectStore('userData').get(`${markerKey}:server:collection:migration-collection-22222222`);
+          const markerRequest = transaction.objectStore('userData').get(`${markerKey}:server:roster:migration-roster-11111111`);
           transaction.oncomplete = () => {
             db.close();
             resolve({
@@ -233,7 +233,7 @@ test.describe('IndexedDB server migration', () => {
       expect(await readClientState(page)).toMatchObject({
         roster,
         collection,
-        version: DB_VERSION
+        version: CURRENT_DB_VERSION
       });
     }
   );
