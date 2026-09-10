@@ -31,6 +31,8 @@ test('reset only deletes the current worker profile documents', async ({ page, e
     if (!response.ok) throw new Error(`worker A select failed: ${response.status}`);
   }, workerProfile.id);
   await resetClientState(page, e2eProfileId);
-  const remaining = await page.evaluate(async (profile) => (await fetch('/api/rosters', { headers: { 'x-depot-profile-id': profile } })).json(), otherProfile);
+  const remaining = await page.request
+    .get('/api/rosters', { headers: { 'x-depot-profile-id': otherProfile } })
+    .then((response) => response.json());
   expect(remaining).toEqual([expect.objectContaining({ id: 'worker-b-document' })]);
 });
