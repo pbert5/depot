@@ -417,7 +417,11 @@ class OfflineStorage {
       const store = await this.store(STORES.ROSTERS);
       for (let attempt = 0; attempt < 10; attempt += 1) {
         const stored = (await req(store.get(rosterId))) as depot.StoredRoster | undefined;
-        if (stored) return !remote || stored.updatedAt > remote.updatedAt ? stored : remote;
+        if (stored) {
+          const storedUpdatedAt = stored.updatedAt ?? '';
+          const remoteUpdatedAt = remote?.updatedAt ?? '';
+          return !remote || storedUpdatedAt > remoteUpdatedAt ? stored : remote;
+        }
         if (remote) return remote;
         // A newly-created roster is staged locally immediately while its
         // debounced API save runs. Allow the detail route to observe that
