@@ -2,17 +2,20 @@ import React, { useMemo } from 'react';
 import type { depot } from '@depot/core';
 import WargearSection from './wargear-section';
 import { separateWargearByType } from '@depot/core/utils/wargear';
+import type { WargearQuantityAdapter } from '../unit-edit/wargear-quantity-adapter';
 
 interface WargearSelectionProps {
   wargear: depot.Wargear[];
   selectedWargear: depot.Wargear[];
   onSelectionChange: (wargear: depot.Wargear, selected: boolean) => void;
+  quantityAdapter?: WargearQuantityAdapter;
 }
 
 const WargearSelection: React.FC<WargearSelectionProps> = ({
   wargear,
   selectedWargear,
-  onSelectionChange
+  onSelectionChange,
+  quantityAdapter
 }) => {
   const { rangedWargear, meleeWargear, mixedWargear } = useMemo(() => {
     return separateWargearByType(wargear);
@@ -33,18 +36,21 @@ const WargearSelection: React.FC<WargearSelectionProps> = ({
         title="Ranged"
         selectedWargear={selectedWargear}
         onSelectionChange={onSelectionChange}
+        quantityAdapter={quantityAdapter}
       />
       <WargearSection
         wargear={mixedWargear}
         title="Mixed"
         selectedWargear={selectedWargear}
         onSelectionChange={onSelectionChange}
+        quantityAdapter={quantityAdapter}
       />
       <WargearSection
         wargear={meleeWargear}
         title="Melee"
         selectedWargear={selectedWargear}
         onSelectionChange={onSelectionChange}
+        quantityAdapter={quantityAdapter}
       />
     </div>
   );

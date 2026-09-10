@@ -1,19 +1,22 @@
 import React from 'react';
 import type { depot } from '@depot/core';
 import WargearRow from './wargear-row';
+import type { WargearQuantityAdapter } from '../unit-edit/wargear-quantity-adapter';
 
 interface WargearSectionProps {
   wargear: depot.Wargear[];
   title: string;
   selectedWargear: depot.Wargear[];
   onSelectionChange: (wargear: depot.Wargear, selected: boolean) => void;
+  quantityAdapter?: WargearQuantityAdapter;
 }
 
 const WargearSection: React.FC<WargearSectionProps> = ({
   wargear,
   title,
   selectedWargear,
-  onSelectionChange
+  onSelectionChange,
+  quantityAdapter
 }) => {
   if (wargear.length === 0) return null;
 
@@ -33,6 +36,7 @@ const WargearSection: React.FC<WargearSectionProps> = ({
             weapon={weapon}
             selected={selectedWargear.some((selected) => selected.id === weapon.id)}
             onToggle={onSelectionChange}
+            quantityAdapter={quantityAdapter}
           />
         ))}
       </div>

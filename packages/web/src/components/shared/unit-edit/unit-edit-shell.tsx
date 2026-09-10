@@ -10,6 +10,7 @@ import ModelCostSelection from './model-cost-selection';
 import WargearAbilitiesSelection from './wargear-abilities-selection';
 import { parseLoadoutWargear } from '@depot/core/utils/wargear';
 import { modelCostsForOrdinal } from '@depot/core/utils/model-costs';
+import { createWargearQuantityAdapter } from './wargear-quantity-adapter';
 import {
   getWargearAbilities,
   normalizeSelectedWargearAbilities
@@ -71,12 +72,14 @@ const UnitEditShell: React.FC<UnitEditShellProps> = ({
 
   const toggleWargear = (wargear: depot.Wargear, selected: boolean) =>
     setSelectedWargear((prev) =>
-      selected
-        ? prev.some((existing) => existing.id === wargear.id)
-          ? prev
-          : [...prev, wargear]
-        : prev.filter((existing) => existing.id !== wargear.id)
+      quantityAdapter.transition(prev, wargear, selected ? 'increase' : 'decrease')
     );
+
+  const quantityAdapter = useMemo(
+    () =>
+      createWargearQuantityAdapter(unit.datasheet.loadout, unit.datasheet.wargear, selectedWargear),
+    [unit.datasheet.loadout, unit.datasheet.wargear, selectedWargear]
+  );
 
   const options = unit.datasheet.options ?? [];
   const shouldShowWargearOptions =
@@ -147,6 +150,7 @@ const UnitEditShell: React.FC<UnitEditShellProps> = ({
             wargear={unit.datasheet.wargear}
             selectedWargear={selectedWargear}
             onSelectionChange={toggleWargear}
+            quantityAdapter={quantityAdapter}
           />
         </section>
 
