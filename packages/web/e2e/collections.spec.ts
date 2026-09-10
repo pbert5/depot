@@ -177,7 +177,7 @@ test.describe('Collections', () => {
       'true'
     );
     await page.getByTestId('collection-unit-card').click();
-    await expect(page.getByLabel('Build state')).toHaveValue('parade-ready');
+    await expect(page.getByTestId('unit-state-section').locator('select')).toHaveValue('parade-ready');
     await expect(page.getByTestId('model-cost-select').locator('select')).toHaveValue(targetCost!);
     await expect(wargear).toHaveAttribute('aria-pressed', 'true');
   });
