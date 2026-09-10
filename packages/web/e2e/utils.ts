@@ -43,35 +43,46 @@ export const createRoster = async (page: Page, options?: { factionLabel?: string
   const rosterBaseUrl = rosterEditUrl.replace(/\/edit$/, '');
   const rosterId = rosterBaseUrl.split('/').pop()!;
 
-  // Landing on /edit does not mean the roster reached IndexedDB. Navigating
-  // before the write commits loses it, so wait for it to be readable back.
+  // Landing on /edit does not mean the roster reached durable storage. The
+  // historical oracle stores it in IndexedDB, while the current candidate
+  // persists it through the API and Postgres. Wait until either backend can
+  // read it back before allowing a following navigation.
   await expect
     .poll(() =>
-      page.evaluate(
-        (id) =>
-          new Promise<boolean>((resolve) => {
-            const open = indexedDB.open('depot-offline');
-            open.onerror = () => resolve(false);
-            open.onsuccess = () => {
-              const db = open.result;
-              if (!Array.from(db.objectStoreNames).includes('rosters')) {
-                db.close();
-                resolve(false);
-                return;
-              }
-              const get = db.transaction('rosters').objectStore('rosters').get(id);
-              get.onsuccess = () => {
-                db.close();
-                resolve(Boolean(get.result));
-              };
-              get.onerror = () => {
-                db.close();
-                resolve(false);
-              };
+      page.evaluate(async (id) => {
+        const apiPersisted = await fetch(`/api/rosters/${encodeURIComponent(id)}`, {
+          cache: 'no-store'
+        })
+          .then(async (response) => {
+            if (!response.ok) return false;
+            const roster = (await response.json()) as { id?: string } | null;
+            return roster?.id === id;
+          })
+          .catch(() => false);
+        if (apiPersisted) return true;
+
+        return new Promise<boolean>((resolve) => {
+          const open = indexedDB.open('depot-offline');
+          open.onerror = () => resolve(false);
+          open.onsuccess = () => {
+            const db = open.result;
+            if (!db.objectStoreNames.contains('rosters')) {
+              db.close();
+              resolve(false);
+              return;
+            }
+            const get = db.transaction('rosters').objectStore('rosters').get(id);
+            get.onsuccess = () => {
+              db.close();
+              resolve(Boolean(get.result));
             };
-          }),
-        rosterId
-      )
+            get.onerror = () => {
+              db.close();
+              resolve(false);
+            };
+          };
+        });
+      }, rosterId)
     )
     .toBe(true);
 
