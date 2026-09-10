@@ -108,4 +108,38 @@ test.describe('Roster unit card view', () => {
     const abilityTags = abilities.locator('[data-testid^="roster-unit-abilities-tag-"]');
     await expect(abilityTags.first()).toBeVisible();
   });
+
+  test('cancels unit edits without persisting changed selections', async ({ page }) => {
+    await addArchonToRoster(page);
+    const card = page.getByTestId('roster-unit-card-archon');
+    await card.click();
+    const firstWargear = page.locator('[data-testid^="wargear-pill-"]').first();
+    const before = await firstWargear.getAttribute('aria-pressed');
+    await firstWargear.click();
+    await page.getByTestId('cancel-button').click();
+    await expect(page).toHaveURL(/\/rosters\/[a-z0-9-]+\/edit#unit-[a-z0-9-]+$/i);
+
+    await page.getByTestId('roster-unit-card-archon').click();
+    await expect(page.locator('[data-testid^="wargear-pill-"]').first()).toHaveAttribute(
+      'aria-pressed',
+      before ?? 'false'
+    );
+  });
+
+  test('duplicates a configured unit and removes it without confirmation', async ({ page }) => {
+    await addArchonToRoster(page);
+    const card = page.getByTestId('roster-unit-card-archon');
+    await card.click();
+    await page.locator('[data-testid^="wargear-pill-"]').first().click();
+    await page.getByTestId('save-button').click();
+
+    const configuredCard = page.getByTestId('roster-unit-card-archon').first();
+    await configuredCard.getByRole('button', { name: 'Duplicate unit' }).click();
+    await expect(page.getByTestId('roster-unit-card-archon')).toHaveCount(2);
+
+    await page.getByTestId('roster-unit-card-archon').last().getByRole('button', {
+      name: 'Remove unit from roster'
+    }).click();
+    await expect(page.getByTestId('roster-unit-card-archon')).toHaveCount(1);
+  });
 });

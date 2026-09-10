@@ -9,7 +9,8 @@ import {
   mockEnhancement,
   createMockDatasheet,
   createMockDetachment,
-  createMockRoster
+  createMockRoster,
+  createMockRosterUnit
 } from '@/test/mock-data';
 
 const mockWargearAbility: depot.Ability = {
@@ -275,6 +276,34 @@ describe('rosterReducer', () => {
     });
   });
 
+  describe('DUPLICATE_UNIT', () => {
+    it('creates a new configured unit without changing the source identity', () => {
+      const configuredUnit = createMockRosterUnit({
+        selectedWargear: [createMockDatasheet().wargear[0]],
+        selectedWargearAbilities: [mockWargearAbility],
+        modelCost: { ...mockRosterUnit.modelCost, cost: '95' }
+      });
+      const roster = createMockRoster({ units: [configuredUnit] });
+
+      const result = rosterReducer(roster, {
+        type: 'DUPLICATE_UNIT',
+        payload: { unit: configuredUnit }
+      });
+
+      expect(result.units).toHaveLength(2);
+      expect(result.units[0]).toEqual(configuredUnit);
+      expect(result.units[1]).toMatchObject({
+        ...configuredUnit,
+        id: expect.any(String)
+      });
+      expect(result.units[1].id).not.toBe(configuredUnit.id);
+      expect(result.units[1].selectedWargear).toEqual(configuredUnit.selectedWargear);
+      expect(result.units[1].selectedWargearAbilities).toEqual(
+        configuredUnit.selectedWargearAbilities
+      );
+    });
+  });
+
   describe('SET_WARLORD', () => {
     it('should set the warlord when unit exists', () => {
       const roster = createMockRoster({
@@ -310,10 +339,14 @@ describe('rosterReducer', () => {
   });
 
   describe('REMOVE_UNIT', () => {
-    it('should clear warlord when the designated unit is removed', () => {
+    it('should clear warlord and dependent enhancements when the designated unit is removed', () => {
       const roster = createMockRoster({
         warlordUnitId: mockRosterUnit.id,
-        units: [mockRosterUnit]
+        units: [mockRosterUnit],
+        enhancements: [
+          { enhancement: mockEnhancement, unitId: mockRosterUnit.id },
+          { enhancement: mockEnhancement, unitId: 'another-unit' }
+        ]
       });
 
       const action: RosterAction = {
@@ -325,6 +358,7 @@ describe('rosterReducer', () => {
 
       expect(result.warlordUnitId).toBeNull();
       expect(result.units).toHaveLength(0);
+      expect(result.enhancements).toEqual([{ enhancement: mockEnhancement, unitId: 'another-unit' }]);
     });
   });
 
