@@ -1,7 +1,8 @@
 import { test, expect, type Page, type Route } from './fixtures';
 
 const DB_NAME = 'depot-offline';
-const DB_VERSION = 11;
+const LEGACY_DB_VERSION = 11;
+const CURRENT_DB_VERSION = 12;
 const MIGRATION_KEY = 'server-migration-v1';
 
 const roster = {
@@ -92,7 +93,7 @@ const seedV11 = (page: Page) =>
         };
         request.onerror = () => reject(request.error);
       }),
-    { name: DB_NAME, version: DB_VERSION, seededRoster: roster, seededCollection: collection }
+    { name: DB_NAME, version: LEGACY_DB_VERSION, seededRoster: roster, seededCollection: collection }
   );
 
 const readClientState = (page: Page) =>
@@ -218,7 +219,7 @@ test.describe('IndexedDB server migration', () => {
         { path: `/api/collections/${collection.id}`, body: collection }
       ]);
       const migratedState = await readClientState(page);
-      expect(migratedState.version).toBe(DB_VERSION);
+      expect(migratedState.version).toBe(CURRENT_DB_VERSION);
       expect(migratedState.roster).toEqual(roster);
       expect(migratedState.collection).toEqual(collection);
       expect(migratedState.marker).toEqual(expect.any(String));
@@ -247,7 +248,7 @@ test.describe('IndexedDB server migration', () => {
       await expect(page.getByTestId('empty-rosters')).toBeVisible();
       await expect.poll(() => api.puts.length).toBe(1);
       const failedState = await readClientState(page);
-      expect(failedState.version).toBe(DB_VERSION);
+      expect(failedState.version).toBe(CURRENT_DB_VERSION);
       expect(failedState.roster).toEqual(roster);
       expect(failedState.collection).toEqual(collection);
       expect(failedState.marker).toBeUndefined();

@@ -7,6 +7,7 @@ import { normalizeDatasheetWargear } from '@depot/core/utils/wargear';
 import { factionsReducer, initialFactionsState } from './reducer';
 import type { FactionsState } from './reducer';
 import { syncFactionIndex } from './index-sync';
+import { useProfileContext } from '../profile/context';
 
 export interface FactionsContextType extends FactionsState {
   getFactionManifest: (slug: string) => Promise<depot.FactionManifest | null>;
@@ -23,6 +24,7 @@ interface FactionsProviderProps {
 
 export const FactionsProvider: FC<FactionsProviderProps> = ({ children }) => {
   const [state, dispatch] = useReducer(factionsReducer, initialFactionsState);
+  const { loading: profileLoading } = useProfileContext();
 
   const fetchIndex = useCallback(async (): Promise<depot.Index[]> => {
     const response = await fetch(getDataUrl(getDataPath('index.json')), { cache: 'no-store' });
@@ -183,9 +185,10 @@ export const FactionsProvider: FC<FactionsProviderProps> = ({ children }) => {
   }, [fetchIndex, refreshOfflineFactions, resetOfflineData]);
 
   useEffect(() => {
+    if (profileLoading) return;
     dispatch({ type: 'LOAD_INDEX_START' });
     void checkForDataUpdates();
-  }, [checkForDataUpdates]);
+  }, [checkForDataUpdates, profileLoading]);
 
   useEffect(() => {
     const handleVisibilityChange = () => {
