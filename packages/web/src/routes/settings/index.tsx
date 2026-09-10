@@ -11,6 +11,7 @@ import SettingToggleItem from './_components/setting-toggle-item';
 import StorageUsage from './_components/storage-usage';
 import ThemePicker from './_components/theme-picker';
 import BackupPanel from './_components/backup-panel';
+import ProfileSelector from './_components/profile-selector';
 
 // Hooks and Context
 import { useSettingsContext } from '@/contexts/settings/context';
@@ -63,6 +64,8 @@ const Settings = () => {
     <AppLayout title="Settings & Preferences">
       <div className="flex flex-col gap-4">
         <h1 className="text-2xl font-bold text-foreground">Settings</h1>
+
+        <ProfileSelector />
 
         <section className="flex flex-col gap-2">
           <SectionHeader title="Appearance" />
