@@ -1,7 +1,7 @@
 import { test, expect } from './fixtures';
 import { resetClientState } from './utils';
 
-test('reset only deletes the current worker profile documents', async ({ page }) => {
+test('reset only deletes the current worker profile documents', async ({ page, e2eProfileId }) => {
   await page.goto('/');
   const workerProfile = await page.evaluate(async () => {
     const response = await fetch('/api/profiles/active');
@@ -30,7 +30,7 @@ test('reset only deletes the current worker profile documents', async ({ page })
     const response = await fetch(`/api/profiles/${profile}/select`, { method: 'POST' });
     if (!response.ok) throw new Error(`worker A select failed: ${response.status}`);
   }, workerProfile.id);
-  await resetClientState(page);
+  await resetClientState(page, e2eProfileId);
   const remaining = await page.evaluate(async (profile) => (await fetch('/api/rosters', { headers: { 'x-depot-profile-id': profile } })).json(), otherProfile);
   expect(remaining).toEqual([expect.objectContaining({ id: 'worker-b-document' })]);
 });

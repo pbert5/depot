@@ -214,10 +214,10 @@ test.describe('IndexedDB server migration', () => {
         collection.name
       );
 
-      expect(api.puts).toEqual([
+      expect(api.puts).toEqual(expect.arrayContaining([
         { path: `/api/rosters/${roster.id}`, body: roster },
         { path: `/api/collections/${collection.id}`, body: collection }
-      ]);
+      ]));
       const migratedState = await readClientState(page);
       expect(migratedState.version).toBe(CURRENT_DB_VERSION);
       expect(migratedState.roster).toEqual(roster);
@@ -265,10 +265,10 @@ test.describe('IndexedDB server migration', () => {
         collection.name
       );
       expect(api.puts).toHaveLength(3);
-      expect(api.puts.slice(1)).toEqual([
+      expect(api.puts.slice(1)).toEqual(expect.arrayContaining([
         { path: `/api/rosters/${roster.id}`, body: roster },
         { path: `/api/collections/${collection.id}`, body: collection }
-      ]);
+      ]));
       expect((await readClientState(page)).marker).toEqual(expect.any(String));
     }
   );

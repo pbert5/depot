@@ -3,7 +3,7 @@ import type { Page } from '@playwright/test';
 
 const DEFAULT_FACTION = 'Drukhari';
 
-export const resetClientState = async (page: Page) => {
+export const resetClientState = async (page: Page, profileId?: string) => {
   await page.goto('/favicon.ico', { waitUntil: 'commit' }).catch(() => {});
   // The worker fixture supplies the profile header/cookie. Only clear that
   // profile's documents so parallel workers cannot delete one another's data.
@@ -21,7 +21,9 @@ export const resetClientState = async (page: Page) => {
     }
   });
   await page.evaluate(async () => {
-    const active = await fetch('/api/profiles/active', { cache: 'no-store' }).then((r) => r.json()) as { id: string };
+    const active = profileId
+      ? { id: profileId }
+      : await fetch('/api/profiles/active', { cache: 'no-store' }).then((r) => r.json()) as { id: string };
     await new Promise<void>((resolve, reject) => {
       const open = indexedDB.open('depot-offline');
       open.onerror = () => resolve();
