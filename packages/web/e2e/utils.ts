@@ -7,19 +7,20 @@ export const resetClientState = async (page: Page, profileId?: string) => {
   await page.goto('/favicon.ico', { waitUntil: 'commit' }).catch(() => {});
   // The worker fixture supplies the profile header/cookie. Only clear that
   // profile's documents so parallel workers cannot delete one another's data.
-  await page.evaluate(async () => {
+  await page.evaluate(async (requestedProfileId) => {
+    const headers = requestedProfileId ? { 'x-depot-profile-id': requestedProfileId } : undefined;
     for (const kind of ['rosters', 'collections']) {
-      const response = await fetch(`/api/${kind}`, { cache: 'no-store' }).catch(() => null);
+      const response = await fetch(`/api/${kind}`, { cache: 'no-store', headers }).catch(() => null);
       if (!response?.ok) continue;
       const documents = (await response.json()) as Array<{ id?: string }>;
       await Promise.all(
         documents
           .map((document) => document.id)
           .filter((id): id is string => Boolean(id))
-          .map((id) => fetch(`/api/${kind}/${encodeURIComponent(id)}`, { method: 'DELETE' }))
+          .map((id) => fetch(`/api/${kind}/${encodeURIComponent(id)}`, { method: 'DELETE', headers }))
       );
     }
-  });
+  }, profileId);
   await page.evaluate(async (requestedProfileId) => {
     const active = requestedProfileId
       ? { id: requestedProfileId }
