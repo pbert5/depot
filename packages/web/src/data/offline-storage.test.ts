@@ -1,7 +1,8 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { offlineStorage } from './offline-storage';
+import { LOCAL_PROFILE_ID, offlineStorage } from './offline-storage';
 import { mergeSettingsWithDefaults } from '@/constants/settings';
 import type { depot } from '@depot/core';
+import { mockRoster } from '@/test/mock-data';
 
 // Mock IndexedDB
 const mockIndexedDB = {
@@ -497,7 +498,7 @@ describe('OfflineStorage', () => {
       const version = await offlineStorage.getDataVersion();
 
       expect(version).toBe('legacy-version');
-      expect(mockObjectStore.get).toHaveBeenCalledWith('data-version');
+      expect(mockObjectStore.get).toHaveBeenCalledWith(expect.stringContaining('data-version'));
     });
 
     it('should return null when data version is not set', async () => {
@@ -525,7 +526,9 @@ describe('OfflineStorage', () => {
       });
 
       await expect(offlineStorage.setDataVersion('next-version')).resolves.toBeUndefined();
-      expect(mockObjectStore.put).toHaveBeenCalledWith('next-version', 'data-version');
+      expect(mockObjectStore.put).toHaveBeenCalledWith(
+        'next-version', expect.stringContaining('data-version')
+      );
     });
 
     it('should handle data version retrieval errors gracefully', async () => {
@@ -619,8 +622,10 @@ describe('OfflineStorage', () => {
             { id: 'test-detachment', slug: 'test-detachment', name: 'Test Detachment' }
           ],
           createdAt: expect.any(String),
-          updatedAt: expect.any(String)
-        })
+          updatedAt: expect.any(String),
+          profileId: expect.any(String)
+        }),
+        expect.stringContaining(`${mockRoster.id}`)
       );
     });
 
@@ -666,7 +671,7 @@ describe('OfflineStorage', () => {
 
       const result = await offlineStorage.getRoster('test-roster');
       expect(result).toEqual(mockRoster);
-      expect(mockObjectStore.get).toHaveBeenCalledWith('test-roster');
+      expect(mockObjectStore.get).toHaveBeenCalledWith(expect.stringContaining('test-roster'));
     });
 
     it('should use a local draft when the server returns null', async () => {
@@ -688,7 +693,7 @@ describe('OfflineStorage', () => {
       fetchSpy.mockRestore();
 
       expect(result).toEqual(localDraft);
-      expect(mockObjectStore.get).toHaveBeenCalledWith('test-roster');
+      expect(mockObjectStore.get).toHaveBeenCalledWith(expect.stringContaining('test-roster'));
     });
 
     it('should prefer a newer local draft over an older server roster', async () => {
@@ -753,7 +758,10 @@ describe('OfflineStorage', () => {
     });
 
     it('should get all rosters from IndexedDB', async () => {
-      const mockRosters = [mockRoster, { ...mockRoster, id: 'roster-2' }];
+      const mockRosters = [
+        { ...mockRoster, profileId: offlineStorage.getProfileId() },
+        { ...mockRoster, id: 'roster-2', profileId: offlineStorage.getProfileId() }
+      ];
 
       mockObjectStore.getAll.mockImplementation(() => {
         const request = { ...mockRequest, result: mockRosters };
@@ -764,7 +772,7 @@ describe('OfflineStorage', () => {
       });
 
       const result = await offlineStorage.getAllRosters();
-      expect(result).toEqual(mockRosters);
+      expect(result).toEqual(mockRosters.map(({ profileId: _profileId, ...roster }) => roster));
     });
 
     it('should return empty array when no rosters exist', async () => {
@@ -790,7 +798,7 @@ describe('OfflineStorage', () => {
       });
 
       await expect(offlineStorage.deleteRoster('test-roster')).resolves.toBeUndefined();
-      expect(mockObjectStore.delete).toHaveBeenCalledWith('test-roster');
+      expect(mockObjectStore.delete).toHaveBeenCalledWith(expect.stringContaining('test-roster'));
     });
 
     it('should handle roster save errors', async () => {
@@ -839,6 +847,68 @@ describe('OfflineStorage', () => {
       );
 
       consoleSpy.mockRestore();
+    });
+  });
+
+  describe('profile isolation and legacy migration', () => {
+    it('uses a profile key for local drafts and bookmarks', async () => {
+      const profileId = 'profile-two';
+      offlineStorage.setProfileId(profileId);
+      mockObjectStore.put.mockImplementation((value, key) => {
+        const request = { ...mockRequest, result: undefined };
+        setTimeout(() => request.onsuccess?.(), 0);
+        return request;
+      });
+
+      await offlineStorage.saveRosterLocally(mockRoster);
+      await offlineStorage.setBookmarks([]);
+
+      expect(mockObjectStore.put).toHaveBeenCalledWith(
+        expect.objectContaining({ profileId }),
+        `${profileId}:${mockRoster.id}`
+      );
+      expect(mockObjectStore.put).toHaveBeenCalledWith([], `${profileId}:bookmarks`);
+      offlineStorage.setProfileId(LOCAL_PROFILE_ID);
+    });
+
+    it('copies legacy documents locally and retries only failed server uploads', async () => {
+      const legacyCollection = { ...mockCollection, id: 'legacy-collection' };
+      let legacyReads = 0;
+      const markers = new Set<string>();
+      mockObjectStore.getAll.mockImplementation(() => {
+        const request = { ...mockRequest, result: legacyReads++ === 0 ? [mockRoster] : [legacyCollection] };
+        setTimeout(() => request.onsuccess?.(), 0);
+        return request;
+      });
+      mockObjectStore.get.mockImplementation((key) => {
+        const request = { ...mockRequest, result: markers.has(key) ? new Date().toISOString() : undefined };
+        setTimeout(() => request.onsuccess?.(), 0);
+        return request;
+      });
+      mockObjectStore.put.mockImplementation((value, key) => {
+        if (typeof key === 'string' && key.startsWith('server-migration-v1:')) markers.add(key);
+        const request = { ...mockRequest, result: undefined };
+        setTimeout(() => request.onsuccess?.(), 0);
+        return request;
+      });
+      const fetchSpy = vi.spyOn(global, 'fetch')
+        .mockResolvedValueOnce({ ok: false, status: 503 } as Response)
+        .mockResolvedValue({ ok: true, status: 200, json: async () => ({}) } as Response);
+
+      const first = await offlineStorage.migrateLegacyUserData();
+      expect(first).toMatchObject({ migrated: false, rosters: 0, collections: 1 });
+      expect(mockObjectStore.put).toHaveBeenCalledWith(
+        expect.objectContaining({ profileId: LOCAL_PROFILE_ID }),
+        `${LOCAL_PROFILE_ID}:${mockRoster.id}`
+      );
+      const callsAfterFirstRun = fetchSpy.mock.calls.length;
+
+      legacyReads = 0;
+      await offlineStorage.migrateLegacyUserData();
+      expect(fetchSpy.mock.calls.length).toBeGreaterThan(callsAfterFirstRun);
+      expect(fetchSpy.mock.calls.filter(([url]) => String(url).includes(`/rosters/${mockRoster.id}`))).toHaveLength(2);
+      expect(fetchSpy.mock.calls.filter(([url]) => String(url).includes(`/collections/${legacyCollection.id}`))).toHaveLength(1);
+      fetchSpy.mockRestore();
     });
   });
 });

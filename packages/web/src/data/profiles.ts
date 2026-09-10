@@ -53,8 +53,11 @@ export const profilesApi: ProfilesAdapter = {
       method: 'POST',
       body: JSON.stringify({ displayName })
     }),
-  select: (profileId) =>
-    request<Profile>(`/profiles/${encodeURIComponent(profileId)}/select`, { method: 'POST' }),
+  select: async (profileId) => {
+    const profile = await request<Profile>(`/profiles/${encodeURIComponent(profileId)}/select`, { method: 'POST' });
+    window.dispatchEvent(new Event('depot:profile-changed'));
+    return profile;
+  },
   rename: (profileId, displayName) =>
     request<Profile>(`/profiles/${encodeURIComponent(profileId)}`, {
       method: 'PATCH',
