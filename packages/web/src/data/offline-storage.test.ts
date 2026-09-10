@@ -691,6 +691,54 @@ describe('OfflineStorage', () => {
       expect(mockObjectStore.get).toHaveBeenCalledWith('test-roster');
     });
 
+    it('should prefer a newer local draft over an older server roster', async () => {
+      const remote = {
+        ...mockRoster,
+        name: 'Server Roster',
+        updatedAt: '2026-09-10T10:00:00.000Z'
+      };
+      const localDraft = {
+        ...mockRoster,
+        name: 'Local Draft',
+        updatedAt: '2026-09-10T10:00:01.000Z'
+      };
+      const fetchSpy = vi
+        .spyOn(global, 'fetch')
+        .mockResolvedValue({ ok: true, status: 200, json: async () => remote } as Response);
+      mockObjectStore.get.mockImplementation(() => {
+        const request = { ...mockRequest, result: localDraft };
+        setTimeout(() => request.onsuccess?.(), 0);
+        return request;
+      });
+
+      await expect(offlineStorage.getRoster('test-roster')).resolves.toEqual(localDraft);
+      fetchSpy.mockRestore();
+    });
+
+    it('should prefer a newer server roster over an older local draft', async () => {
+      const remote = {
+        ...mockRoster,
+        name: 'Server Roster',
+        updatedAt: '2026-09-10T10:00:01.000Z'
+      };
+      const localDraft = {
+        ...mockRoster,
+        name: 'Local Draft',
+        updatedAt: '2026-09-10T10:00:00.000Z'
+      };
+      const fetchSpy = vi
+        .spyOn(global, 'fetch')
+        .mockResolvedValue({ ok: true, status: 200, json: async () => remote } as Response);
+      mockObjectStore.get.mockImplementation(() => {
+        const request = { ...mockRequest, result: localDraft };
+        setTimeout(() => request.onsuccess?.(), 0);
+        return request;
+      });
+
+      await expect(offlineStorage.getRoster('test-roster')).resolves.toEqual(remote);
+      fetchSpy.mockRestore();
+    });
+
     it('should return null when roster does not exist', async () => {
       mockObjectStore.get.mockImplementation(() => {
         const request = { ...mockRequest };

@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, waitFor, act } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { RosterProvider, useRoster } from './context';
-import { createMockRoster } from '@/test/mock-data';
+import { createMockRoster, mockDatasheet } from '@/test/mock-data';
 
 // Mock offline storage using vi.hoisted for proper scoping
 const mockOfflineStorage = vi.hoisted(() => ({
@@ -41,7 +41,7 @@ vi.mock('@/contexts/toast/context', () => ({
 
 // Test component to consume the context
 const TestComponent = ({ rosterId: _rosterId }: { rosterId?: string }) => {
-  const { state, createRoster, updateRosterDetails } = useRoster();
+  const { state, createRoster, updateRosterDetails, addUnit } = useRoster();
 
   const handleCreateRoster = () => {
     const newId = createRoster({
@@ -89,9 +89,21 @@ const TestComponent = ({ rosterId: _rosterId }: { rosterId?: string }) => {
       </button>
       <button
         data-testid="rename-roster"
-        onClick={() => updateRosterDetails({ name: 'Updated Roster', detachments: state.detachments, maxPoints: state.points.max })}
+        onClick={() =>
+          updateRosterDetails({
+            name: 'Updated Roster',
+            detachments: state.detachments,
+            maxPoints: state.points.max
+          })
+        }
       >
         Rename Roster
+      </button>
+      <button
+        data-testid="add-unit"
+        onClick={() => addUnit(mockDatasheet, mockDatasheet.modelCosts[0])}
+      >
+        Add Unit
       </button>
     </div>
   );
@@ -241,6 +253,31 @@ describe('RosterProvider', () => {
     expect(mockOfflineStorage.saveRoster).not.toHaveBeenCalled();
   });
 
+  it('stages an added unit locally before the debounced server save', async () => {
+    mockOfflineStorage.getRoster.mockResolvedValue(
+      createMockRoster({ id: 'test-roster-id', units: [] })
+    );
+
+    render(
+      <TestWrapper rosterId="test-roster-id">
+        <TestComponent />
+      </TestWrapper>
+    );
+
+    await waitFor(() =>
+      expect(screen.getByTestId('roster-id')).toHaveTextContent('test-roster-id')
+    );
+    act(() => screen.getByTestId('add-unit').click());
+
+    expect(mockOfflineStorage.saveRosterLocally).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        id: 'test-roster-id',
+        units: [expect.objectContaining({ datasheetSlug: mockDatasheet.slug })]
+      })
+    );
+    expect(mockOfflineStorage.saveRosterToServer).not.toHaveBeenCalled();
+  });
+
   it('keeps edits and exposes failure with bounded retry and manual retry', async () => {
     vi.useFakeTimers();
     const error = new Error('IndexedDB write failure');
@@ -268,7 +305,10 @@ describe('RosterProvider', () => {
     expect(screen.getByRole('button', { name: 'Retry' })).toBeInTheDocument();
 
     expect(mockOfflineStorage.saveRosterToServer).toHaveBeenCalledTimes(1);
-    expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('Failed to auto-save roster'), error);
+    expect(consoleSpy).toHaveBeenCalledWith(
+      expect.stringContaining('Failed to auto-save roster'),
+      error
+    );
 
     act(() => {
       screen.getByRole('button', { name: 'Retry' }).click();
@@ -287,7 +327,9 @@ describe('RosterProvider', () => {
     vi.useFakeTimers();
     const first = deferred<void>();
     const second = deferred<void>();
-    mockOfflineStorage.saveRosterToServer.mockReturnValueOnce(first.promise).mockReturnValueOnce(second.promise);
+    mockOfflineStorage.saveRosterToServer
+      .mockReturnValueOnce(first.promise)
+      .mockReturnValueOnce(second.promise);
 
     render(
       <TestWrapper>

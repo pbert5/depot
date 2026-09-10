@@ -3,7 +3,7 @@ import { createContext, useContext, useReducer, useEffect, useMemo, useRef, useS
 import { offlineStorage } from '@/data/offline-storage';
 import { useFactionsContext } from '@/contexts/factions/context';
 import { hydrateRoster } from '@/utils/refresh-user-data';
-import type { RosterContextValue, RosterSaveState } from './types';
+import type { RosterAction, RosterContextValue, RosterSaveState } from './types';
 import { rosterReducer } from './reducer';
 import { initialState } from './constants';
 import { createId } from '@/utils/id';
@@ -76,9 +76,14 @@ export const RosterProvider: FC<RosterProviderProps> = ({ children, rosterId }) 
           (error: unknown) => {
             console.error(`Failed to auto-save roster ${latestStateRef.current.id}:`, error);
             if (generation !== generationRef.current) return;
-            void offlineStorage.saveRosterLocally(latestStateRef.current).catch((localError: unknown) => {
-              console.error(`Failed to keep local roster draft ${latestStateRef.current.id}:`, localError);
-            });
+            void offlineStorage
+              .saveRosterLocally(latestStateRef.current)
+              .catch((localError: unknown) => {
+                console.error(
+                  `Failed to keep local roster draft ${latestStateRef.current.id}:`,
+                  localError
+                );
+              });
             setSaveState('failed');
             if (retryCountRef.current < 3) {
               retryCountRef.current += 1;
@@ -123,16 +128,32 @@ export const RosterProvider: FC<RosterProviderProps> = ({ children, rosterId }) 
       (error: unknown) => {
         console.error(`Failed to retry roster save ${latestStateRef.current.id}:`, error);
         if (generation === generationRef.current) setSaveState('failed');
-        void offlineStorage.saveRosterLocally(latestStateRef.current).catch((localError: unknown) => {
-          console.error(`Failed to keep local roster draft ${latestStateRef.current.id}:`, localError);
-        });
+        void offlineStorage
+          .saveRosterLocally(latestStateRef.current)
+          .catch((localError: unknown) => {
+            console.error(
+              `Failed to keep local roster draft ${latestStateRef.current.id}:`,
+              localError
+            );
+          });
       }
     );
   };
 
   // `dispatch` is stable, so the action set is created once.
-  const actions = useMemo<Omit<RosterContextValue, 'state' | 'saveState' | 'retrySave'>>(
-    () => ({
+  const actions = useMemo<Omit<RosterContextValue, 'state' | 'saveState' | 'retrySave'>>(() => {
+    const stageRosterChange = (action: RosterAction) => {
+      const nextRoster = rosterReducer(latestStateRef.current, action);
+      latestStateRef.current = nextRoster;
+      dispatch(action);
+      if (nextRoster.id) {
+        void offlineStorage.saveRosterLocally(nextRoster).catch((error: unknown) => {
+          console.error(`Failed to keep roster draft ${nextRoster.id}:`, error);
+        });
+      }
+    };
+
+    return {
       createRoster: (payload) => {
         const id = createId();
         const roster = {
@@ -153,26 +174,29 @@ export const RosterProvider: FC<RosterProviderProps> = ({ children, rosterId }) 
         });
         return id;
       },
-      updateRosterDetails: (payload) => dispatch({ type: 'UPDATE_DETAILS', payload }),
-      setRoster: (payload) => dispatch({ type: 'SET_ROSTER', payload }),
+      updateRosterDetails: (payload) => stageRosterChange({ type: 'UPDATE_DETAILS', payload }),
+      setRoster: (payload) => stageRosterChange({ type: 'SET_ROSTER', payload }),
       addUnit: (datasheet, modelCost) =>
-        dispatch({ type: 'ADD_UNIT', payload: { datasheet, modelCost } }),
-      duplicateUnit: (unit) => dispatch({ type: 'DUPLICATE_UNIT', payload: { unit } }),
-      removeUnit: (rosterUnitId) => dispatch({ type: 'REMOVE_UNIT', payload: { rosterUnitId } }),
+        stageRosterChange({ type: 'ADD_UNIT', payload: { datasheet, modelCost } }),
+      duplicateUnit: (unit) => stageRosterChange({ type: 'DUPLICATE_UNIT', payload: { unit } }),
+      removeUnit: (rosterUnitId) =>
+        stageRosterChange({ type: 'REMOVE_UNIT', payload: { rosterUnitId } }),
       updateUnitWargear: (rosterUnitId, wargear) =>
-        dispatch({ type: 'UPDATE_UNIT_WARGEAR', payload: { rosterUnitId, wargear } }),
+        stageRosterChange({ type: 'UPDATE_UNIT_WARGEAR', payload: { rosterUnitId, wargear } }),
       updateUnitWargearAbilities: (rosterUnitId, abilities) =>
-        dispatch({ type: 'UPDATE_UNIT_WARGEAR_ABILITIES', payload: { rosterUnitId, abilities } }),
+        stageRosterChange({
+          type: 'UPDATE_UNIT_WARGEAR_ABILITIES',
+          payload: { rosterUnitId, abilities }
+        }),
       updateUnitModelCost: (rosterUnitId, modelCost) =>
-        dispatch({ type: 'UPDATE_UNIT_MODEL_COST', payload: { rosterUnitId, modelCost } }),
+        stageRosterChange({ type: 'UPDATE_UNIT_MODEL_COST', payload: { rosterUnitId, modelCost } }),
       applyEnhancement: (enhancement, targetUnitId) =>
-        dispatch({ type: 'APPLY_ENHANCEMENT', payload: { enhancement, targetUnitId } }),
+        stageRosterChange({ type: 'APPLY_ENHANCEMENT', payload: { enhancement, targetUnitId } }),
       removeEnhancement: (enhancementId) =>
-        dispatch({ type: 'REMOVE_ENHANCEMENT', payload: { enhancementId } }),
-      setWarlord: (unitId) => dispatch({ type: 'SET_WARLORD', payload: { unitId } })
-    }),
-    []
-  );
+        stageRosterChange({ type: 'REMOVE_ENHANCEMENT', payload: { enhancementId } }),
+      setWarlord: (unitId) => stageRosterChange({ type: 'SET_WARLORD', payload: { unitId } })
+    };
+  }, []);
 
   const saveLabel = {
     saved: 'Saved',
@@ -185,10 +209,18 @@ export const RosterProvider: FC<RosterProviderProps> = ({ children, rosterId }) 
     <RosterContext.Provider value={{ state, saveState, retrySave, ...actions }}>
       {children}
       {state.id && (
-        <div className="fixed bottom-3 right-3 z-20 flex items-center gap-2 rounded-sm border border-border-strong bg-surface-card px-3 py-2 text-xs text-subtle shadow-lg" data-testid="roster-save-status" aria-live="polite">
+        <div
+          className="fixed bottom-3 right-3 z-20 flex items-center gap-2 rounded-sm border border-border-strong bg-surface-card px-3 py-2 text-xs text-subtle shadow-lg"
+          data-testid="roster-save-status"
+          aria-live="polite"
+        >
           <span>{saveLabel}</span>
           {saveState === 'failed' && (
-            <button type="button" className="font-bold text-accent-600 underline" onClick={retrySave}>
+            <button
+              type="button"
+              className="font-bold text-accent-600 underline"
+              onClick={retrySave}
+            >
               Retry
             </button>
           )}

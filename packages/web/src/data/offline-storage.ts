@@ -235,7 +235,9 @@ class OfflineStorage {
 
   async getCollection(id: string): Promise<depot.StoredCollection | null> {
     try {
-      return await apiRequest<depot.StoredCollection | null>(`/collections/${encodeURIComponent(id)}`);
+      return await apiRequest<depot.StoredCollection | null>(
+        `/collections/${encodeURIComponent(id)}`
+      );
     } catch {
       // Recovery fallback; normal writes go to the API whenever it is reachable.
     }
@@ -403,11 +405,11 @@ class OfflineStorage {
   }
 
   async getRoster(rosterId: string): Promise<depot.StoredRoster | null> {
+    let remote: depot.StoredRoster | null = null;
     try {
-      const remote = await apiRequest<depot.StoredRoster | null>(
+      remote = await apiRequest<depot.StoredRoster | null>(
         `/rosters/${encodeURIComponent(rosterId)}`
       );
-      if (remote) return remote;
     } catch {
       // Recovery fallback; the server is authoritative when available.
     }
@@ -415,13 +417,14 @@ class OfflineStorage {
       const store = await this.store(STORES.ROSTERS);
       for (let attempt = 0; attempt < 10; attempt += 1) {
         const stored = (await req(store.get(rosterId))) as depot.StoredRoster | undefined;
-        if (stored) return stored;
+        if (stored) return !remote || stored.updatedAt > remote.updatedAt ? stored : remote;
+        if (remote) return remote;
         // A newly-created roster is staged locally immediately while its
         // debounced API save runs. Allow the detail route to observe that
         // write when it mounts in the same navigation turn.
         await new Promise((resolve) => setTimeout(resolve, 25));
       }
-      return null;
+      return remote;
     } catch (error) {
       console.error(`Failed to get roster ${rosterId} from IndexedDB:`, error);
       return null;
@@ -454,7 +457,11 @@ class OfflineStorage {
     await req(store.delete(rosterId));
   }
 
-  async migrateLegacyUserData(): Promise<{ migrated: boolean; rosters: number; collections: number }> {
+  async migrateLegacyUserData(): Promise<{
+    migrated: boolean;
+    rosters: number;
+    collections: number;
+  }> {
     const marker = await this.getUserDataMarker(KEYS.MIGRATION);
     if (marker) return { migrated: false, rosters: 0, collections: 0 };
     try {
@@ -468,8 +475,22 @@ class OfflineStorage {
       ]);
       let rosters = 0;
       let collections = 0;
-      if (remoteRosters.length === 0) for (const roster of legacyRosters) { await apiRequest(`/rosters/${encodeURIComponent(roster.id)}`, { method: 'PUT', body: JSON.stringify(roster) }); rosters++; }
-      if (remoteCollections.length === 0) for (const collection of legacyCollections) { await apiRequest(`/collections/${encodeURIComponent(collection.id)}`, { method: 'PUT', body: JSON.stringify(collection) }); collections++; }
+      if (remoteRosters.length === 0)
+        for (const roster of legacyRosters) {
+          await apiRequest(`/rosters/${encodeURIComponent(roster.id)}`, {
+            method: 'PUT',
+            body: JSON.stringify(roster)
+          });
+          rosters++;
+        }
+      if (remoteCollections.length === 0)
+        for (const collection of legacyCollections) {
+          await apiRequest(`/collections/${encodeURIComponent(collection.id)}`, {
+            method: 'PUT',
+            body: JSON.stringify(collection)
+          });
+          collections++;
+        }
       await this.setUserDataMarker(KEYS.MIGRATION, new Date().toISOString());
       return { migrated: true, rosters, collections };
     } catch (error) {
