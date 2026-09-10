@@ -20,9 +20,9 @@ export const resetClientState = async (page: Page, profileId?: string) => {
       );
     }
   });
-  await page.evaluate(async () => {
-    const active = profileId
-      ? { id: profileId }
+  await page.evaluate(async (requestedProfileId) => {
+    const active = requestedProfileId
+      ? { id: requestedProfileId }
       : await fetch('/api/profiles/active', { cache: 'no-store' }).then((r) => r.json()) as { id: string };
     await new Promise<void>((resolve, reject) => {
       const open = indexedDB.open('depot-offline');
@@ -48,7 +48,7 @@ export const resetClientState = async (page: Page, profileId?: string) => {
     });
     localStorage.clear();
     sessionStorage.clear();
-  });
+  }, profileId);
 };
 
 export const selectFactionAndDetachment = async (
