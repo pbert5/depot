@@ -68,26 +68,72 @@ export const getUnitOrdinal = (units: RosterUnit[], unitId: string): number => {
   return units.filter((entry) => entry.datasheet.id === unit.datasheet.id).indexOf(unit) + 1;
 };
 
+export interface EnhancementEligibility {
+  eligible: boolean;
+  /** Human-readable diagnostic; null means the enhancement is legal. */
+  reason: string | null;
+}
+
+type EnhancementRoster = Partial<Pick<Roster, 'detachments' | 'detachment'>>;
+
+const eligibilityResult = (eligible: boolean, reason: string | null): EnhancementEligibility => ({
+  eligible,
+  reason
+});
+
+/**
+ * The single enhancement legality predicate used by roster editing and validation.
+ *
+ * Enhancement references in saved rosters are intentionally slim. When an ID is
+ * present in a selected detachment, use that detachment's current catalog entry
+ * so newly-added structured datasheet links and keyword rules still apply.
+ */
+export const getEnhancementEligibility = (
+  enhancement: Enhancement,
+  unit: RosterUnit,
+  roster: EnhancementRoster
+): EnhancementEligibility => {
+  const detachments = getRosterDetachments(roster);
+  const catalogEnhancement = detachments
+    .flatMap((detachment) => detachment.enhancements)
+    .find((candidate) => candidate.id === enhancement.id);
+  const current = catalogEnhancement ?? enhancement;
+
+  if (!catalogEnhancement) {
+    return eligibilityResult(false, `${enhancement.name} is not from a selected detachment.`);
+  }
+
+  const effectiveKeywords = getEffectiveKeywords(
+    unit.datasheet,
+    detachments.flatMap((detachment) => detachment.abilities)
+  );
+  if (hasKeyword({ keywords: effectiveKeywords }, 'Epic Hero')) {
+    return eligibilityResult(
+      false,
+      `${unit.datasheet.name} is an Epic Hero and cannot take ${current.name}.`
+    );
+  }
+  if (current.datasheetIds?.length && !current.datasheetIds.includes(unit.datasheet.id)) {
+    return eligibilityResult(false, `${current.name} is not applicable to ${unit.datasheet.name}.`);
+  }
+  if (!current.upgrade && !hasKeyword({ keywords: effectiveKeywords }, 'Character')) {
+    return eligibilityResult(
+      false,
+      `${unit.datasheet.name} is not a Character and cannot take ${current.name}.`
+    );
+  }
+  return eligibilityResult(true, null);
+};
+
 /** Enhancements a unit may take: characters take any, other units only Upgrades, Epic Heroes none. */
 export const getEligibleEnhancements = (
   unit: RosterUnit,
-  roster: Partial<Pick<Roster, 'detachments' | 'detachment'>>
+  roster: EnhancementRoster
 ): Enhancement[] => {
-  const effective = {
-    keywords: getEffectiveKeywords(
-      unit.datasheet,
-      getRosterDetachments(roster).flatMap((detachment) => detachment.abilities)
-    )
-  };
-  if (hasKeyword(effective, 'Epic Hero')) {
-    return [];
-  }
   const pool = getRosterDetachments(roster).flatMap((detachment) => detachment.enhancements);
-  const applicable = (enhancement: Enhancement): boolean =>
-    !enhancement.datasheetIds?.length || enhancement.datasheetIds.includes(unit.datasheet.id);
-  return hasKeyword(effective, 'Character')
-    ? pool.filter(applicable)
-    : pool.filter((enhancement) => enhancement.upgrade && applicable(enhancement));
+  return pool.filter(
+    (enhancement) => getEnhancementEligibility(enhancement, unit, roster).eligible
+  );
 };
 
 /** Contextual role shared by roster legality and roster presentation. */
@@ -251,29 +297,12 @@ export const validateRoster = (roster: Roster): RosterIssue[] => {
   for (const { enhancement, unitId } of roster.enhancements) {
     const unit = units.find((entry) => entry.id === unitId);
     if (!unit) continue;
-    const effective = {
-      keywords: getEffectiveKeywords(
-        unit.datasheet,
-        detachments.flatMap((detachment) => detachment.abilities)
-      )
-    };
-    if (hasKeyword(effective, 'Epic Hero')) {
+    const eligibility = getEnhancementEligibility(enhancement, unit, roster);
+    if (!eligibility.eligible) {
       issues.push({
         code: 'enhancement',
         unitId,
-        message: `${unit.datasheet.name} is an Epic Hero and cannot take ${enhancement.name}.`
-      });
-    } else if (enhancement.datasheetIds?.length && !enhancement.datasheetIds.includes(unit.datasheet.id)) {
-      issues.push({
-        code: 'enhancement',
-        unitId,
-        message: `${enhancement.name} is not applicable to ${unit.datasheet.name}.`
-      });
-    } else if (!enhancement.upgrade && !hasKeyword(effective, 'Character')) {
-      issues.push({
-        code: 'enhancement',
-        unitId,
-        message: `${unit.datasheet.name} is not a Character and cannot take ${enhancement.name}.`
+        message: eligibility.reason!
       });
     }
   }

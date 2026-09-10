@@ -8,7 +8,7 @@ import { normalizeSelectedWargearAbilities } from '@depot/core/utils/abilities';
 import type { RosterState, RosterAction } from './types';
 import { initialState } from './constants';
 import { calculateTotalPoints, getRosterDetachments } from '@depot/core/utils/roster';
-import { enforceCostBrackets } from '@depot/core/utils/roster-legality';
+import { enforceCostBrackets, getEnhancementEligibility } from '@depot/core/utils/roster-legality';
 import { createId } from '@/utils/id';
 
 type UnitLike = Pick<
@@ -148,7 +148,14 @@ export const rosterReducer = (state: RosterState, action: RosterAction): RosterS
         )
       });
 
-    case 'APPLY_ENHANCEMENT':
+    case 'APPLY_ENHANCEMENT': {
+      const target = state.units.find((unit) => unit.id === action.payload.targetUnitId);
+      if (
+        !target ||
+        !getEnhancementEligibility(action.payload.enhancement, target, state).eligible
+      ) {
+        return state;
+      }
       return finalize({
         ...state,
         enhancements: [
@@ -156,6 +163,7 @@ export const rosterReducer = (state: RosterState, action: RosterAction): RosterS
           { enhancement: action.payload.enhancement, unitId: action.payload.targetUnitId }
         ]
       });
+    }
 
     case 'REMOVE_ENHANCEMENT':
       return finalize({

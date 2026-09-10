@@ -3,6 +3,7 @@ import type { Datasheet, Detachment, Enhancement, Roster, RosterUnit } from '../
 import {
   enforceCostBrackets,
   getBattleSize,
+  getEnhancementEligibility,
   getEligibleEnhancements,
   getRosterDpSpent,
   getUnitOrdinal,
@@ -217,6 +218,83 @@ describe('getEligibleEnhancements', () => {
         r
       )
     ).toEqual([]);
+  });
+});
+
+describe('getEnhancementEligibility', () => {
+  it('returns one reason for detachment, structured-link, and unit-keyword failures', () => {
+    const linked = enhancement({ id: 'linked', datasheetIds: ['captain'] });
+    const relic = enhancement({ id: 'relic' });
+    const det = detachment({ id: 'det', enhancements: [linked, relic] });
+    const rosterWithDetachment = roster({ detachments: [det] });
+
+    expect(getEnhancementEligibility(linked, unit(captain), rosterWithDetachment)).toEqual({
+      eligible: true,
+      reason: null
+    });
+    expect(getEnhancementEligibility(linked, unit(intercessors), rosterWithDetachment)).toEqual({
+      eligible: false,
+      reason: 'linked is not applicable to intercessors.'
+    });
+    expect(getEnhancementEligibility(linked, unit(captain), roster({ detachments: [] }))).toEqual({
+      eligible: false,
+      reason: 'linked is not from a selected detachment.'
+    });
+
+    const nonCharacter = unit(intercessors);
+    expect(getEnhancementEligibility(relic, nonCharacter, rosterWithDetachment)).toEqual({
+      eligible: false,
+      reason: 'intercessors is not a Character and cannot take relic.'
+    });
+  });
+
+  it('uses static and contextual keywords and resolves stale persisted references', () => {
+    const upgrade = enhancement({ id: 'upgrade', upgrade: true, datasheetIds: ['granted'] });
+    const relic = enhancement({ id: 'relic' });
+    const det = detachment({
+      id: 'det',
+      enhancements: [upgrade, relic],
+      abilities: [
+        {
+          id: 'grant-character',
+          factionId: 'SM',
+          name: 'Grant',
+          legend: '',
+          description: '',
+          detachment: 'det',
+          keywordGrants: [{ targetKeyword: 'Infantry', grantedKeyword: 'Character' }]
+        }
+      ]
+    });
+    const contextual = unit(datasheet({ id: 'granted', keywords: kw('Infantry') }));
+    expect(getEnhancementEligibility(relic, contextual, { detachments: [det] })).toEqual({
+      eligible: true,
+      reason: null
+    });
+
+    const stale = {
+      id: 'upgrade',
+      name: 'Old Upgrade',
+      cost: '10',
+      detachment: 'det'
+    } as Enhancement;
+    expect(getEnhancementEligibility(stale, contextual, { detachments: [det] })).toEqual({
+      eligible: true,
+      reason: null
+    });
+    expect(
+      getEnhancementEligibility(
+        enhancement({ id: 'upgrade', upgrade: true }),
+        unit(datasheet({ id: 'other', keywords: kw('Infantry') })),
+        { detachments: [det] }
+      )
+    ).toEqual({ eligible: false, reason: 'upgrade is not applicable to other.' });
+
+    const epicHero = unit(datasheet({ id: 'hero', keywords: kw('Character', 'Epic Hero') }));
+    expect(getEnhancementEligibility(relic, epicHero, { detachments: [det] })).toEqual({
+      eligible: false,
+      reason: 'hero is an Epic Hero and cannot take relic.'
+    });
   });
 });
 

@@ -23,6 +23,27 @@ const mockWargearAbility: depot.Ability = {
 };
 
 describe('rosterReducer', () => {
+  it('applies only enhancements accepted by the canonical legality predicate', () => {
+    const roster = createMockRoster({
+      detachments: [createMockDetachment({ enhancements: [mockEnhancement] })],
+      units: [mockRosterUnit]
+    });
+    const action: RosterAction = {
+      type: 'APPLY_ENHANCEMENT',
+      payload: { enhancement: mockEnhancement, targetUnitId: mockRosterUnit.id }
+    };
+
+    expect(rosterReducer(roster, action).enhancements).toEqual([
+      { enhancement: mockEnhancement, unitId: mockRosterUnit.id }
+    ]);
+    expect(
+      rosterReducer(roster, {
+        ...action,
+        payload: { ...action.payload, targetUnitId: 'missing-unit' }
+      })
+    ).toBe(roster);
+  });
+
   it('should return initial state for unknown action', () => {
     const result = rosterReducer(initialState, { type: 'UNKNOWN_ACTION' } as any);
     expect(result).toBe(initialState);
@@ -379,7 +400,9 @@ describe('rosterReducer', () => {
 
       expect(result.warlordUnitId).toBeNull();
       expect(result.units).toHaveLength(0);
-      expect(result.enhancements).toEqual([{ enhancement: mockEnhancement, unitId: 'another-unit' }]);
+      expect(result.enhancements).toEqual([
+        { enhancement: mockEnhancement, unitId: 'another-unit' }
+      ]);
     });
   });
 
