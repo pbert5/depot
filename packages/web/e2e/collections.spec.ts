@@ -133,8 +133,8 @@ test.describe('Collections', () => {
     const collectionUrl = page.url();
     await page.getByTestId('add-collection-units-button').click();
     await expect(page.getByTestId('datasheet-search')).toBeVisible({ timeout: 60000 });
-    await page.getByTestId('datasheet-search').fill('Cadian Heavy Weapons Squad');
-    await page.getByTestId('add-datasheet-cadian-heavy-weapons-squad').click();
+    await page.getByTestId('datasheet-search').fill('Leman Russ Commander');
+    await page.getByTestId('add-datasheet-leman-russ-commander').click();
     await page.getByRole('button', { name: /Review Selection/i }).click();
     await page.getByTestId('unit-selection-summary').getByRole('button', { name: 'Confirm' }).click();
     await expect(page).toHaveURL(collectionUrl);
@@ -212,10 +212,13 @@ test.describe('Collections', () => {
     await expect(page.getByTestId('empty-collection-state')).toBeVisible();
 
     await page.goto('/collections');
-    await expect(page.getByTestId(/^collection-card-/).filter({ hasText: collectionName })).toBeVisible();
+    const sourceCardAfterCopy = page
+      .getByTestId(/^collection-card-/)
+      .filter({ has: page.getByText(collectionName, { exact: true }) });
+    await expect(sourceCardAfterCopy).toBeVisible();
     page.once('dialog', (dialog) => dialog.accept());
-    await page.getByTestId(/^collection-card-/).filter({ hasText: collectionName }).getByTestId('delete-collection-button').click();
-    await expect(page.getByTestId(/^collection-card-/).filter({ hasText: collectionName })).toHaveCount(0);
+    await sourceCardAfterCopy.getByTestId('delete-collection-button').click();
+    await expect(sourceCardAfterCopy).toHaveCount(0);
     await expect(page.getByTestId(/^collection-card-/).filter({ hasText: `${collectionName} Copy` })).toHaveCount(1);
   });
 });
