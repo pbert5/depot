@@ -113,7 +113,7 @@ test.describe('Collections', () => {
     await expect(summaryDrawer.getByText(/3 units/i)).toBeVisible();
 
     await summaryDrawer.getByRole('button', { name: 'Confirm' }).click();
-    await page.goto(collectionUrl);
+    await expect(page).toHaveURL(collectionUrl);
 
     const unitCards = page.getByTestId('collection-unit-card');
     await expect(unitCards).toHaveCount(3);
@@ -137,7 +137,7 @@ test.describe('Collections', () => {
     await page.getByTestId('add-datasheet-cadian-heavy-weapons-squad').click();
     await page.getByRole('button', { name: /Review Selection/i }).click();
     await page.getByTestId('unit-selection-summary').getByRole('button', { name: 'Confirm' }).click();
-    await page.goto(collectionUrl);
+    await expect(page).toHaveURL(collectionUrl);
 
     const unitCard = page.getByTestId('collection-unit-card').first();
     const unitId = await unitCard.getAttribute('id');
@@ -194,7 +194,7 @@ test.describe('Collections', () => {
     await page.getByTestId('add-datasheet-cadian-heavy-weapons-squad').click();
     await page.getByRole('button', { name: /Review Selection/i }).click();
     await page.getByTestId('unit-selection-summary').getByRole('button', { name: 'Confirm' }).click();
-    await page.goto(sourceUrl);
+    await expect(page).toHaveURL(sourceUrl);
     const sourceUnitId = await page.getByTestId('collection-unit-card').getAttribute('id');
 
     await page.goto('/collections');

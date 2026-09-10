@@ -178,6 +178,35 @@ export const RosterProvider: FC<RosterProviderProps> = ({ children, rosterId }) 
       setRoster: (payload) => stageRosterChange({ type: 'SET_ROSTER', payload }),
       addUnit: (datasheet, modelCost) =>
         stageRosterChange({ type: 'ADD_UNIT', payload: { datasheet, modelCost } }),
+      addUnitsAndPersist: async (units) => {
+        if (!latestStateRef.current.id) throw new Error('Roster is not loaded');
+
+        let nextRoster = latestStateRef.current;
+        for (const { datasheet, modelCost } of units) {
+          nextRoster = rosterReducer(nextRoster, {
+            type: 'ADD_UNIT',
+            payload: { datasheet, modelCost }
+          });
+        }
+        latestStateRef.current = nextRoster;
+        // Prevent the debounced effect from creating a second save after this
+        // awaited confirmation boundary. The explicit write below is the
+        // navigation gate; local staging remains available for recovery.
+        skipNextSaveRef.current = true;
+        if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+        if (retryTimerRef.current) clearTimeout(retryTimerRef.current);
+        dispatch({ type: 'SET_ROSTER', payload: nextRoster });
+        setSaveState('saving');
+        try {
+          await offlineStorage.saveRosterLocally(nextRoster);
+          await offlineStorage.saveRosterToServer(nextRoster);
+          setSaveState('saved');
+        } catch (error) {
+          skipNextSaveRef.current = false;
+          setSaveState('failed');
+          throw error;
+        }
+      },
       duplicateUnit: (unit) => stageRosterChange({ type: 'DUPLICATE_UNIT', payload: { unit } }),
       removeUnit: (rosterUnitId) =>
         stageRosterChange({ type: 'REMOVE_UNIT', payload: { rosterUnitId } }),

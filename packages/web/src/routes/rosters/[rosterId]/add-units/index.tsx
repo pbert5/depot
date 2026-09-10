@@ -14,7 +14,7 @@ import AddUnitsView from '@/components/shared/add-units-view';
 import { getRosterSubtitle } from '@depot/core/utils/roster';
 
 const AddRosterUnitsView: FC = () => {
-  const { state: roster, addUnit } = useRoster();
+  const { state: roster, addUnitsAndPersist } = useRoster();
   const { showToast } = useToast();
   const navigate = useNavigate();
   const rosterFactionSlug = roster.faction?.slug ?? roster.factionSlug ?? undefined;
@@ -29,20 +29,25 @@ const AddRosterUnitsView: FC = () => {
     );
   }
 
-  const handleAddSelectedUnits = (selectedUnits: SelectedUnit[]) => {
-    selectedUnits.forEach(({ datasheet, modelCost }) => {
-      addUnit(datasheet, modelCost);
-    });
-
-    showToast({
-      type: 'success',
-      title: 'Units Added',
-      message: `Added ${selectedUnits.length} unit${
-        selectedUnits.length === 1 ? '' : 's'
-      } to roster`
-    });
-
-    navigate(`/rosters/${roster.id}/edit`);
+  const handleAddSelectedUnits = async (selectedUnits: SelectedUnit[]) => {
+    try {
+      await addUnitsAndPersist(selectedUnits);
+      showToast({
+        type: 'success',
+        title: 'Units Added',
+        message: `Added ${selectedUnits.length} unit${
+          selectedUnits.length === 1 ? '' : 's'
+        } to roster`
+      });
+      navigate(`/rosters/${roster.id}/edit`);
+    } catch (error) {
+      console.error('Failed to commit roster units', error);
+      showToast({
+        type: 'error',
+        title: 'Could not add units',
+        message: 'Your selections were kept locally. Please retry.'
+      });
+    }
   };
 
   return (

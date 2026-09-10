@@ -46,7 +46,7 @@ test.describe('Roster from Collection', () => {
     await expect(summaryDrawer).toBeVisible();
     await summaryDrawer.getByRole('button', { name: 'Confirm' }).click();
 
-    await page.goto(collectionUrl);
+    await expect(page).toHaveURL(collectionUrl);
     const unitCards = page.getByTestId('collection-unit-card');
     await expect(unitCards).toHaveCount(2);
 
@@ -98,7 +98,7 @@ test.describe('Roster from Collection', () => {
     await page.getByTestId('add-datasheet-cadian-heavy-weapons-squad').click();
     await page.getByRole('button', { name: /Review Selection/i }).click();
     await page.getByTestId('unit-selection-summary').getByRole('button', { name: 'Confirm' }).click();
-    await page.goto(collectionUrl);
+    await expect(page).toHaveURL(collectionUrl);
     await expect(page.getByTestId('collection-unit-card')).toHaveCount(1);
 
     await page.getByTestId('create-roster-from-collection-button').click();

@@ -52,6 +52,9 @@ export interface RosterContextValue {
   updateRosterDetails: (payload: Payload<'UPDATE_DETAILS'>) => void;
   setRoster: (roster: Payload<'SET_ROSTER'>) => void;
   addUnit: (datasheet: depot.Datasheet, modelCost: depot.ModelCost) => void;
+  addUnitsAndPersist: (
+    units: Array<{ datasheet: depot.Datasheet; modelCost: depot.ModelCost }>
+  ) => Promise<void>;
   duplicateUnit: (unit: depot.RosterUnit) => void;
   removeUnit: (rosterUnitId: string) => void;
   updateUnitWargear: (rosterUnitId: string, wargear: depot.Wargear[]) => void;
