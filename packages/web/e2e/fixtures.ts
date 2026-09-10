@@ -1,10 +1,12 @@
 import { test as base, expect } from '@playwright/test';
 
 type WorkerFixtures = { e2eProfileId: string };
+const e2eBaseURL = process.env.WEB_BASE_URL
+  ?? `http://${process.env.HOST ?? 'localhost'}:${process.env.PORT ?? '5173'}`;
 
 export const test = base.extend<{}, WorkerFixtures>({
-  e2eProfileId: [async ({ playwright, baseURL }, use, workerInfo) => {
-    const api = await playwright.request.newContext({ baseURL });
+  e2eProfileId: [async ({ playwright }, use, workerInfo) => {
+    const api = await playwright.request.newContext({ baseURL: e2eBaseURL });
     const response = await api.post('/api/profiles', {
       data: { displayName: `E2E ${workerInfo.project.name} worker ${workerInfo.workerIndex}` }
     });
