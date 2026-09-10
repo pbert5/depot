@@ -182,10 +182,10 @@ export const RosterProvider: FC<RosterProviderProps> = ({ children, rosterId }) 
         if (!latestStateRef.current.id) throw new Error('Roster is not loaded');
 
         let nextRoster = latestStateRef.current;
-        for (const { datasheet, modelCost } of units) {
+        for (const { datasheet, modelCost, id } of units) {
           nextRoster = rosterReducer(nextRoster, {
             type: 'ADD_UNIT',
-            payload: { datasheet, modelCost }
+            payload: { datasheet, modelCost, id }
           });
         }
         latestStateRef.current = nextRoster;
