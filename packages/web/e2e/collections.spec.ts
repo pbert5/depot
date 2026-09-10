@@ -164,12 +164,16 @@ test.describe('Collections', () => {
     await expect(page.getByTestId('collection-unit-card')).toHaveAttribute('data-state', 'parade-ready');
     await page.getByTestId('collection-state-filter-sprue').click();
     await expect(page.getByTestId('empty-collection-state')).toBeVisible();
+    await page.getByTestId('collection-state-filter-built').click();
+    await expect(page.getByTestId('collection-state-filter-built')).toHaveAttribute('aria-selected', 'true');
+    await page.getByTestId('collection-state-filter-battle-ready').click();
+    await expect(page.getByTestId('collection-state-filter-battle-ready')).toHaveAttribute('aria-selected', 'true');
     await page.getByTestId('collection-state-filter-parade-ready').click();
     await expect(page.getByTestId('collection-unit-card')).toHaveAttribute('id', unitId!);
 
     await page.reload();
     await expect(page.getByTestId('collection-state-filter-parade-ready')).toHaveAttribute(
-      'aria-pressed',
+      'aria-selected',
       'true'
     );
     await page.getByTestId('collection-unit-card').click();
