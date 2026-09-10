@@ -175,6 +175,7 @@ export const BATTLEFIELD_ROLE_LABELS: Record<BattlefieldRole, string> = {
 
 /** Order sections appear in, matching how a list is read top-down. */
 export const BATTLEFIELD_ROLES: BattlefieldRole[] = [
+  'epic-hero',
   'character',
   'battleline',
   'dedicated-transport',
