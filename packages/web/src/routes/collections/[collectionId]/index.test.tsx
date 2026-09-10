@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { depot } from '@depot/core';
 
@@ -41,11 +41,38 @@ vi.mock('@/components/layout', () => ({
 vi.mock('@/routes/collections/_components/collection-unit-card', () => ({
   default: ({
     unit,
-    dataTestId
+    dataTestId,
+    selectionMode,
+    selected,
+    onToggleSelection
   }: {
     unit: { id: string; datasheet: { name: string } };
     dataTestId?: string;
-  }) => <div data-testid={dataTestId}>{unit.datasheet.name}</div>
+    selectionMode?: boolean;
+    selected?: boolean;
+    onToggleSelection?: (id: string) => void;
+  }) => (
+    <div
+      data-testid={dataTestId}
+      role={selectionMode ? 'checkbox' : undefined}
+      aria-checked={selectionMode ? selected : undefined}
+      tabIndex={selectionMode ? 0 : undefined}
+      onClick={() => selectionMode && onToggleSelection?.(unit.id)}
+      onKeyDown={(event) => {
+        if (selectionMode && (event.key === 'Enter' || event.key === ' ')) {
+          event.preventDefault();
+          onToggleSelection?.(unit.id);
+        }
+      }}
+    >
+      {unit.datasheet.name}
+    </div>
+  )
+}));
+
+vi.mock('@/components/ui/drawer', () => ({
+  default: ({ isOpen, children }: { isOpen: boolean; children: ReactNode }) =>
+    isOpen ? <div data-testid="mock-drawer">{children}</div> : null
 }));
 
 const mockNavigate = vi.fn();
@@ -83,26 +110,38 @@ const collectionUnit: depot.CollectionUnit = {
   state: 'battle-ready'
 };
 
+const secondCollectionUnit: depot.CollectionUnit = {
+  ...collectionUnit,
+  id: 'unit-2',
+  datasheet: { ...mockDatasheet, name: 'Intercessors' },
+  state: 'sprue'
+};
+
 const collection: depot.Collection = {
   id: 'collection-1',
   name: 'My Marines',
   factionId: 'SM',
   factionSlug: 'space-marines',
   faction: mockFactionIndex,
-  items: [collectionUnit],
+  items: [collectionUnit, secondCollectionUnit],
   points: { current: 80 }
 };
 
 describe('CollectionPage', () => {
+  const save = vi.fn().mockResolvedValue(undefined);
+
   beforeEach(() => {
+    window.localStorage.clear();
     mockNavigate.mockClear();
     mockUseCollection.mockReset();
     mockUseCollection.mockReturnValue({
       collection,
       loading: false,
       error: null,
-      save: vi.fn()
+      save
     });
+    save.mockClear();
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
   });
 
   it('renders units, state filters and add-units without a Lists tab', () => {
@@ -115,7 +154,7 @@ describe('CollectionPage', () => {
     expect(screen.getByRole('heading', { name: 'My Marines' })).toBeInTheDocument();
     expect(screen.getByTestId('collection-units-section')).toBeInTheDocument();
     expect(screen.getByTestId('collection-state-filter-all')).toBeInTheDocument();
-    expect(screen.getByTestId('collection-unit-card')).toHaveTextContent('Captain');
+    expect(screen.getAllByTestId('collection-unit-card')[0]).toHaveTextContent('Captain');
     expect(screen.getByTestId('add-collection-units-button')).toBeInTheDocument();
     expect(screen.getByTestId('create-roster-from-collection-button')).toBeInTheDocument();
     expect(screen.queryByTestId('collection-section-units')).not.toBeInTheDocument();
@@ -141,5 +180,44 @@ describe('CollectionPage', () => {
     expect(screen.getByTestId('add-collection-units-button')).toBeInTheDocument();
     expect(screen.queryByTestId('create-roster-from-collection-button')).not.toBeInTheDocument();
     expect(screen.queryByTestId('collection-section-lists')).not.toBeInTheDocument();
+  });
+
+  it('selects the visible filtered view and clears selection when the filter changes', () => {
+    render(<TestWrapper><CollectionPage /></TestWrapper>);
+
+    fireEvent.click(screen.getByTestId('toggle-selection-mode'));
+    fireEvent.click(screen.getByTestId('select-visible-units'));
+    expect(screen.getByText('2 units selected')).toBeInTheDocument();
+    expect(screen.getAllByRole('checkbox')).toHaveLength(2);
+
+    fireEvent.click(screen.getByTestId('collection-state-filter-sprue'));
+    expect(screen.queryByTestId('bulk-action-bar')).not.toBeInTheDocument();
+    expect(screen.getAllByRole('checkbox')).toHaveLength(1);
+  });
+
+  it('uses keyboard-accessible cards without navigating in select mode and supports cancel', () => {
+    render(<TestWrapper><CollectionPage /></TestWrapper>);
+
+    fireEvent.click(screen.getByTestId('toggle-selection-mode'));
+    const card = screen.getAllByRole('checkbox')[0];
+    fireEvent.keyDown(card, { key: 'Enter' });
+    expect(screen.getByText('1 unit selected')).toBeInTheDocument();
+    expect(mockNavigate).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByTestId('cancel-selection'));
+    expect(screen.queryByTestId('selection-toolbar')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('bulk-action-bar')).not.toBeInTheDocument();
+  });
+
+  it('persists a bulk removal once and clears selection after success', async () => {
+    render(<TestWrapper><CollectionPage /></TestWrapper>);
+
+    fireEvent.click(screen.getByTestId('toggle-selection-mode'));
+    fireEvent.click(screen.getByTestId('select-visible-units'));
+    fireEvent.click(screen.getByTestId('bulk-remove'));
+
+    await waitFor(() => expect(save).toHaveBeenCalledTimes(1));
+    expect(save.mock.calls[0][0].items).toHaveLength(0);
+    expect(screen.queryByTestId('bulk-action-bar')).not.toBeInTheDocument();
   });
 });

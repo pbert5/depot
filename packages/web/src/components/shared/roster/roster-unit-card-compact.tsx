@@ -1,4 +1,4 @@
-import type { FC, ReactNode } from 'react';
+import type { FC, ReactNode, KeyboardEvent } from 'react';
 import { Crown } from 'lucide-react';
 import { cx } from '@/utils/cx';
 import type { depot } from '@depot/core';
@@ -13,6 +13,11 @@ interface RosterUnitCardCompactProps {
   actions?: ReactNode;
   children?: ReactNode;
   onClick?: () => void;
+  onKeyDown?: (event: KeyboardEvent<HTMLDivElement>) => void;
+  role?: string;
+  tabIndex?: number;
+  'aria-checked'?: boolean;
+  'aria-label'?: string;
   state?: depot.CollectionUnitState;
   dataTestId?: string;
   showWargearSummary?: boolean;
@@ -29,6 +34,11 @@ const RosterUnitCardCompact: FC<RosterUnitCardCompactProps> = ({
   actions,
   children,
   onClick,
+  onKeyDown,
+  role,
+  tabIndex,
+  'aria-checked': ariaChecked,
+  'aria-label': ariaLabel,
   state,
   dataTestId,
   showWargearSummary = true,
@@ -68,6 +78,11 @@ const RosterUnitCardCompact: FC<RosterUnitCardCompactProps> = ({
         className
       )}
       onClick={onClick}
+      onKeyDown={onKeyDown}
+      role={role}
+      tabIndex={tabIndex}
+      aria-checked={ariaChecked}
+      aria-label={ariaLabel}
       data-testid={dataTestId}
       data-state={state}
     >

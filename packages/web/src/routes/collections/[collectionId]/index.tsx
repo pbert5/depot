@@ -2,7 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { useNavigate } from '@/lib/navigation';
 import { createId } from '@/utils/id';
-import { Plus, ClipboardPlus, Download, RefreshCw } from 'lucide-react';
+import { Plus, ClipboardPlus, Download, RefreshCw, ListChecks } from 'lucide-react';
 import type { depot } from '@depot/core';
 
 import AppLayout from '@/components/layout';
@@ -30,6 +30,9 @@ import {
 } from '@depot/core/utils/collection';
 import { COLLECTION_STATE_META, getCollectionChartCopy } from '@/utils/collection';
 import CollectionStateChart from '@/routes/collections/_components/collection-state-chart';
+import BulkActionBar from '@/components/shared/bulk-action-bar';
+import { persistSelectedMutation } from '@/data/bulk-mutations';
+import Drawer from '@/components/ui/drawer';
 
 const COLLECTION_STATE_FILTER_KEY = 'collection-state-filter';
 
@@ -39,6 +42,10 @@ const CollectionPageContent: React.FC<{ collectionId?: string }> = ({ collection
   const { getDatasheet, getFactionManifest, dataVersion } = useFactionsContext();
   const { showToast } = useToast();
   const [refreshing, setRefreshing] = useState(false);
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkBusy, setBulkBusy] = useState(false);
+  const [statePickerOpen, setStatePickerOpen] = useState(false);
   const { selection: activeStateFilter, setSelection: setStateFilter } = usePersistedTagSelection<
     depot.CollectionUnitState | 'all'
   >(
@@ -86,6 +93,65 @@ const CollectionPageContent: React.FC<{ collectionId?: string }> = ({ collection
 
     return collection.items.filter((item) => item.state === activeStateFilter);
   }, [activeStateFilter, collection]);
+
+  const clearSelection = () => setSelectedIds(new Set());
+  const cancelSelection = () => {
+    clearSelection();
+    setSelectionMode(false);
+  };
+  const toggleSelection = (unitId: string) => {
+    setSelectedIds((current) => {
+      const next = new Set(current);
+      if (next.has(unitId)) next.delete(unitId);
+      else next.add(unitId);
+      return next;
+    });
+  };
+  const handleStateFilterChange = (value: depot.CollectionUnitState | 'all') => {
+    setStateFilter(value);
+    clearSelection();
+  };
+
+  const saveSelectedMutation = async (
+    ids: readonly string[],
+    mutation: Parameters<typeof persistSelectedMutation<depot.CollectionUnit>>[2]
+  ): Promise<boolean> => {
+    if (!collection || ids.length === 0) return false;
+    setBulkBusy(true);
+    try {
+      await persistSelectedMutation(collection.items, ids, mutation, (items) =>
+        save({ ...collection, items })
+      );
+      clearSelection();
+      return true;
+    } catch (err) {
+      console.error('Failed to update collection units', err);
+      showToast({
+        type: 'error',
+        title: 'Bulk update failed',
+        message: 'Could not update the selected units. Please try again.'
+      });
+      return false;
+    } finally {
+      setBulkBusy(false);
+    }
+  };
+
+  const handleBulkChangeState = () => setStatePickerOpen(true);
+  const applyBulkState = async (state: depot.CollectionUnitState) => {
+    setStatePickerOpen(false);
+    const ids = Array.from(selectedIds);
+    if (!window.confirm(`Change state for ${ids.length} selected unit${ids.length === 1 ? '' : 's'}?`)) return;
+    if (await saveSelectedMutation(ids, { update: (item) => ({ ...item, state }) })) {
+      showToast({ type: 'success', title: 'Units updated', message: 'Selected unit states were changed.' });
+    }
+  };
+  const handleBulkRemove = async (ids: string[]) => {
+    if (!window.confirm(`Remove ${ids.length} selected unit${ids.length === 1 ? '' : 's'} from this collection?`)) return;
+    if (await saveSelectedMutation(ids, { remove: true })) {
+      showToast({ type: 'success', title: 'Units removed', message: 'Selected units were removed.' });
+    }
+  };
 
   const handleRefreshCollectionData = async () => {
     if (refreshing || !collection) return;
@@ -209,6 +275,12 @@ const CollectionPageContent: React.FC<{ collectionId?: string }> = ({ collection
         hasUnits
           ? [
               {
+                icon: <ListChecks size={16} />,
+                onClick: selectionMode ? cancelSelection : () => setSelectionMode(true),
+                ariaLabel: selectionMode ? 'Cancel selection' : 'Select units',
+                'data-testid': 'toggle-selection-mode'
+              },
+              {
                 icon: <ClipboardPlus size={16} />,
                 onClick: () => navigate(`/collections/${collection.id}/new-roster`),
                 ariaLabel: 'Create roster from collection',
@@ -235,6 +307,22 @@ const CollectionPageContent: React.FC<{ collectionId?: string }> = ({ collection
       }
     >
       <div className="flex flex-col gap-3">
+        {selectionMode ? (
+          <div className="flex flex-wrap items-center justify-between gap-2" data-testid="selection-toolbar">
+            <Button type="button" size="sm" variant="secondary" onClick={() => setSelectedIds(new Set(filteredItems.map((item) => item.id)))} data-testid="select-visible-units">
+              Select visible
+            </Button>
+            <Button type="button" size="sm" variant="ghost" onClick={cancelSelection} data-testid="cancel-selection">
+              Cancel
+            </Button>
+          </div>
+        ) : null}
+        <BulkActionBar
+          selection={{ selectedIds, clearSelection }}
+          onChangeState={handleBulkChangeState}
+          onRemove={handleBulkRemove}
+          busy={bulkBusy}
+        />
         {isStale ? (
           <Alert variant="warning" title="Collection uses older data">
             <div className="flex flex-col gap-2">
@@ -270,7 +358,7 @@ const CollectionPageContent: React.FC<{ collectionId?: string }> = ({ collection
             <PillTabs
               tabs={stateFilters}
               active={activeStateFilter}
-              onChange={setStateFilter}
+              onChange={handleStateFilterChange}
               ariaLabel="Filter units by build state"
               testIdPrefix="collection-state-filter"
             />
@@ -286,6 +374,9 @@ const CollectionPageContent: React.FC<{ collectionId?: string }> = ({ collection
                   onRemove={handleRemove}
                   onDuplicate={handleDuplicate}
                   state={item.state}
+                  selectionMode={selectionMode}
+                  selected={selectedIds.has(item.id)}
+                  onToggleSelection={toggleSelection}
                   dataTestId="collection-unit-card"
                 />
               ))}
@@ -304,6 +395,17 @@ const CollectionPageContent: React.FC<{ collectionId?: string }> = ({ collection
           )}
         </RosterSection>
       </div>
+      <Drawer isOpen={statePickerOpen} onClose={() => setStatePickerOpen(false)} position="bottom" data-testid="bulk-state-picker" aria-label="Change state for selected units">
+        <div className="flex flex-col gap-3 p-5">
+          <h2 className="text-base font-bold">Change state</h2>
+          {COLLECTION_UNIT_STATES.map((state) => (
+            <Button key={state} type="button" variant="secondary" onClick={() => void applyBulkState(state)} data-testid={`bulk-state-${state}`}>
+              {COLLECTION_STATE_META[state].label}
+            </Button>
+          ))}
+          <Button type="button" variant="ghost" onClick={() => setStatePickerOpen(false)}>Cancel</Button>
+        </div>
+      </Drawer>
     </AppLayout>
   );
 };

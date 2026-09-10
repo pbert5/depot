@@ -14,6 +14,9 @@ interface CollectionUnitCardProps {
   onDuplicate: (unit: depot.RosterUnit) => void;
   state?: depot.CollectionUnitState;
   dataTestId?: string;
+  selectionMode?: boolean;
+  selected?: boolean;
+  onToggleSelection?: (unitId: string) => void;
 }
 
 const CollectionUnitCard: React.FC<CollectionUnitCardProps> = ({
@@ -22,13 +25,26 @@ const CollectionUnitCard: React.FC<CollectionUnitCardProps> = ({
   onRemove,
   onDuplicate,
   state,
-  dataTestId
+  dataTestId,
+  selectionMode = false,
+  selected = false,
+  onToggleSelection
 }) => {
   const navigate = useNavigate();
   const [isExpanded, setIsExpanded] = useState(false);
 
   const handleCardClick = () => {
+    if (selectionMode) {
+      onToggleSelection?.(unit.id);
+      return;
+    }
     navigate(`/collections/${collectionId}/units/${unit.id}/edit`);
+  };
+
+  const handleCardKeyDown = (event: React.KeyboardEvent) => {
+    if (!selectionMode || (event.key !== 'Enter' && event.key !== ' ')) return;
+    event.preventDefault();
+    onToggleSelection?.(unit.id);
   };
 
   const handleToggleExpand = (event: MouseEvent) => {
@@ -79,11 +95,17 @@ const CollectionUnitCard: React.FC<CollectionUnitCardProps> = ({
     <RosterUnitCardCompact
       id={`collection-unit-${unit.id}`}
       unit={unit}
-      actions={actions}
+      actions={selectionMode ? undefined : actions}
       onClick={handleCardClick}
+      onKeyDown={handleCardKeyDown}
+      role={selectionMode ? 'checkbox' : undefined}
+      tabIndex={selectionMode ? 0 : undefined}
+      aria-checked={selectionMode ? selected : undefined}
+      aria-label={selectionMode ? `Select ${unit.datasheet.name}` : undefined}
       state={state}
       dataTestId={dataTestId}
       showWargearSummary={!isExpanded}
+      className={selected ? 'border-border-accent bg-surface-accent' : undefined}
     >
       {isExpanded ? (
         <div
