@@ -669,6 +669,28 @@ describe('OfflineStorage', () => {
       expect(mockObjectStore.get).toHaveBeenCalledWith('test-roster');
     });
 
+    it('should use a local draft when the server returns null', async () => {
+      const localDraft = { ...mockRoster, name: 'Local Draft' };
+      const fetchSpy = vi.spyOn(global, 'fetch').mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: async () => null
+      } as Response);
+      mockObjectStore.get.mockImplementation(() => {
+        const request = { ...mockRequest, result: localDraft };
+        setTimeout(() => {
+          if (request.onsuccess) request.onsuccess();
+        }, 0);
+        return request;
+      });
+
+      const result = await offlineStorage.getRoster('test-roster');
+      fetchSpy.mockRestore();
+
+      expect(result).toEqual(localDraft);
+      expect(mockObjectStore.get).toHaveBeenCalledWith('test-roster');
+    });
+
     it('should return null when roster does not exist', async () => {
       mockObjectStore.get.mockImplementation(() => {
         const request = { ...mockRequest };

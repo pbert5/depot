@@ -404,7 +404,10 @@ class OfflineStorage {
 
   async getRoster(rosterId: string): Promise<depot.StoredRoster | null> {
     try {
-      return await apiRequest<depot.StoredRoster | null>(`/rosters/${encodeURIComponent(rosterId)}`);
+      const remote = await apiRequest<depot.StoredRoster | null>(
+        `/rosters/${encodeURIComponent(rosterId)}`
+      );
+      if (remote) return remote;
     } catch {
       // Recovery fallback; the server is authoritative when available.
     }
