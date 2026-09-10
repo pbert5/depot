@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 
 // Cadian Heavy Weapons Squad carries the widest stats in the catalogue:
 // a `D6+1` damage value and a `SUSTAINED HITS 1` keyword.

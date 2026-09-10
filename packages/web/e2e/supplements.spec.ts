@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 
 // Assumes generated data includes Space Marines with Blood Angels supplements.
 test('supplement tabs filter datasheets', async ({ page }) => {

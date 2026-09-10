@@ -1,4 +1,4 @@
-import { test, expect, type Page, type Route } from '@playwright/test';
+import { test, expect, type Page, type Route } from './fixtures';
 
 const DB_NAME = 'depot-offline';
 const DB_VERSION = 11;

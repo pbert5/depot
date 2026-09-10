@@ -1,4 +1,4 @@
-import { test, expect, type Page } from '@playwright/test';
+import { test, expect, type Page } from './fixtures';
 
 const FACTION_NAME = 'Space Marines';
 const DETACHMENT_NAME = 'Gladius Task Force';

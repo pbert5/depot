@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 import { resetClientState, stubClipboardOnly, stubNativeShareWithClipboardFallback } from './utils';
 
 const DATASHEET_URL = '/faction/space-marines/datasheet/captain';

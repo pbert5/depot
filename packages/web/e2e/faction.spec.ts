@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 
 test.describe('Faction detail', () => {
   test('renders datasheets, supports filtering, and shows detachments', async ({ page }) => {

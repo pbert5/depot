@@ -7,14 +7,9 @@ const external = Boolean(process.env.WEB_BASE_URL);
 
 export default defineConfig({
   testDir: './e2e',
-  // The isolated API deliberately uses one disposable user.  Running tests
-  // concurrently lets one test's reset delete another test's documents.
-  // Keep the shared-runtime contract deterministic until each worker has its
-  // own request-scoped profile identity.
-  fullyParallel: false,
+  fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
-    workers: 1,
   reporter: process.env.CI ? 'html' : 'list',
   use: {
     baseURL,

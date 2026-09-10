@@ -5,8 +5,8 @@ const DEFAULT_FACTION = 'Drukhari';
 
 export const resetClientState = async (page: Page) => {
   await page.goto('/favicon.ico', { waitUntil: 'commit' }).catch(() => {});
-  // The isolated E2E API uses a reserved disposable user. Clear its remote
-  // documents as well as browser state so tests cannot observe earlier tests.
+  // The worker fixture supplies the profile header/cookie. Only clear that
+  // profile's documents so parallel workers cannot delete one another's data.
   await page.evaluate(async () => {
     for (const kind of ['rosters', 'collections']) {
       const response = await fetch(`/api/${kind}`, { cache: 'no-store' }).catch(() => null);
@@ -21,11 +21,28 @@ export const resetClientState = async (page: Page) => {
     }
   });
   await page.evaluate(async () => {
-    await new Promise<void>((resolve) => {
-      const request = indexedDB.deleteDatabase('depot-offline');
-      request.onsuccess = () => resolve();
-      request.onerror = () => resolve();
-      request.onblocked = () => resolve();
+    const active = await fetch('/api/profiles/active', { cache: 'no-store' }).then((r) => r.json()) as { id: string };
+    await new Promise<void>((resolve, reject) => {
+      const open = indexedDB.open('depot-offline');
+      open.onerror = () => resolve();
+      open.onsuccess = () => {
+        const db = open.result;
+        const stores = ['scopedUserData', 'scopedRosters', 'scopedCollections'].filter((name) => db.objectStoreNames.contains(name));
+        if (!stores.length) { db.close(); resolve(); return; }
+        const transaction = db.transaction(stores, 'readwrite');
+        for (const name of stores) {
+          const store = transaction.objectStore(name);
+          const cursor = store.openCursor();
+          cursor.onsuccess = () => {
+            const current = cursor.result;
+            if (!current) return;
+            if (String(current.key).startsWith(`${active.id}:`)) current.delete();
+            current.continue();
+          };
+        }
+        transaction.oncomplete = () => { db.close(); resolve(); };
+        transaction.onerror = () => { db.close(); reject(transaction.error); };
+      };
     });
     localStorage.clear();
     sessionStorage.clear();

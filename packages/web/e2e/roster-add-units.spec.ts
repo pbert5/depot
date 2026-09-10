@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 import { resetClientState, createRoster } from './utils';
 
 // Drukhari has fewer datasheets, so the add-units page loads faster/stably in CI.

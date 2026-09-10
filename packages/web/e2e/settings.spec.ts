@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 
 const toggles = [
   { name: 'Forge World Units', testId: 'forge-world-units-toggle', defaultChecked: false },

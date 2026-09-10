@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 
 test.describe('Not Found page', () => {
   test('shows 404 content and navigation actions', async ({ page }) => {
