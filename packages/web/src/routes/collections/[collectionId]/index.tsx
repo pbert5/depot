@@ -233,6 +233,10 @@ const CollectionPageContent: React.FC<{ collectionId?: string }> = ({ collection
 
   const totalUnits = collection?.items.length ?? 0;
   const hasUnits = totalUnits > 0;
+  const addUnitsPath =
+    activeStateFilter === 'all'
+      ? `/collections/${collection?.id}/add-units`
+      : `/collections/${collection?.id}/add-units?state=${encodeURIComponent(activeStateFilter)}`;
   const pageTitle = collection ? `${collection.name} - Collection Tracker` : 'Collection Overview';
   useScrollToHash({ enabled: Boolean(collection) });
   const { heading: collectionHeading } = collection
@@ -298,7 +302,7 @@ const CollectionPageContent: React.FC<{ collectionId?: string }> = ({ collection
       footer={
         <Button
           fullWidth
-          onClick={() => navigate(`/collections/${collection.id}/add-units`)}
+          onClick={() => navigate(addUnitsPath)}
           data-testid="add-collection-units-button"
         >
           <Plus size={16} />
@@ -387,7 +391,7 @@ const CollectionPageContent: React.FC<{ collectionId?: string }> = ({ collection
               dataTestId="empty-collection-state"
               action={{
                 label: 'Add units',
-                onClick: () => navigate(`/collections/${collection.id}/add-units`),
+                onClick: () => navigate(addUnitsPath),
                 icon: <Plus size={14} />,
                 testId: 'empty-collection-add-units'
               }}

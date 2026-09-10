@@ -274,6 +274,27 @@ describe('rosterReducer', () => {
       expect(result.units).toHaveLength(1);
       expect(result.units[0].selectedWargear).toEqual([datasheet.wargear[0], datasheet.wargear[2]]);
     });
+
+    it('does not add the same confirmed picker unit twice', () => {
+      const datasheet = createMockDatasheet();
+      const roster = createMockRoster({ units: [] });
+      const action: RosterAction = {
+        type: 'ADD_UNIT',
+        payload: {
+          id: 'picker-selection-1',
+          datasheet,
+          modelCost: datasheet.modelCosts[0]
+        }
+      };
+
+      const firstResult = rosterReducer(roster, action);
+      const retryResult = rosterReducer(firstResult, action);
+
+      expect(firstResult.units).toHaveLength(1);
+      expect(retryResult).toBe(firstResult);
+      expect(retryResult.units).toHaveLength(1);
+      expect(retryResult.units[0].id).toBe('picker-selection-1');
+    });
   });
 
   describe('DUPLICATE_UNIT', () => {

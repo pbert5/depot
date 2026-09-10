@@ -41,7 +41,7 @@ vi.mock('@/contexts/toast/context', () => ({
 
 // Test component to consume the context
 const TestComponent = ({ rosterId: _rosterId }: { rosterId?: string }) => {
-  const { state, createRoster, updateRosterDetails, addUnit } = useRoster();
+  const { state, createRoster, updateRosterDetails, addUnit, addUnitsAndPersist } = useRoster();
 
   const handleCreateRoster = () => {
     const newId = createRoster({
@@ -105,6 +105,21 @@ const TestComponent = ({ rosterId: _rosterId }: { rosterId?: string }) => {
       >
         Add Unit
       </button>
+      <button
+        data-testid="confirm-add-unit"
+        onClick={() =>
+          void addUnitsAndPersist([
+            {
+              id: 'picker-selection-1',
+              datasheet: mockDatasheet,
+              modelCost: mockDatasheet.modelCosts[0]
+            }
+          ]).catch(() => undefined)
+        }
+      >
+        Confirm Add Unit
+      </button>
+      <div data-testid="unit-count">{state.units.length}</div>
     </div>
   );
 };
@@ -321,6 +336,39 @@ describe('RosterProvider', () => {
     expect(mockOfflineStorage.saveRosterToServer).toHaveBeenCalledTimes(2);
 
     consoleSpy.mockRestore();
+  });
+
+  it('does not duplicate Add Units selections when confirmation is retried after save failure', async () => {
+    mockOfflineStorage.getRoster.mockResolvedValue(
+      createMockRoster({ id: 'test-roster-id', units: [] })
+    );
+    mockOfflineStorage.saveRosterToServer.mockRejectedValueOnce(new Error('server unavailable'));
+
+    render(
+      <TestWrapper rosterId="test-roster-id">
+        <TestComponent />
+      </TestWrapper>
+    );
+
+    await waitFor(() =>
+      expect(screen.getByTestId('roster-id')).toHaveTextContent('test-roster-id')
+    );
+
+    await act(async () => {
+      screen.getByTestId('confirm-add-unit').click();
+      await Promise.resolve();
+    });
+    expect(screen.getByTestId('unit-count')).toHaveTextContent('1');
+    expect(screen.getByTestId('roster-save-status')).toHaveTextContent('Save failed');
+
+    await act(async () => {
+      screen.getByTestId('confirm-add-unit').click();
+      await Promise.resolve();
+    });
+
+    expect(screen.getByTestId('unit-count')).toHaveTextContent('1');
+    expect(screen.getByTestId('roster-save-status')).toHaveTextContent('Saved');
+    expect(mockOfflineStorage.saveRosterToServer).toHaveBeenCalledTimes(2);
   });
 
   it('does not let an out-of-order response acknowledge newer edits', async () => {

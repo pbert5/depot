@@ -25,7 +25,10 @@ export type RosterAction =
       type: 'UPDATE_DETAILS';
       payload: { name: string; detachments: depot.Detachment[]; maxPoints: number };
     }
-  | { type: 'ADD_UNIT'; payload: { datasheet: depot.Datasheet; modelCost: depot.ModelCost } }
+  | {
+      type: 'ADD_UNIT';
+      payload: { datasheet: depot.Datasheet; modelCost: depot.ModelCost; id?: string };
+    }
   | { type: 'DUPLICATE_UNIT'; payload: { unit: depot.RosterUnit } }
   | { type: 'REMOVE_UNIT'; payload: { rosterUnitId: string } }
   | { type: 'UPDATE_UNIT_WARGEAR'; payload: { rosterUnitId: string; wargear: depot.Wargear[] } }
@@ -53,7 +56,7 @@ export interface RosterContextValue {
   setRoster: (roster: Payload<'SET_ROSTER'>) => void;
   addUnit: (datasheet: depot.Datasheet, modelCost: depot.ModelCost) => void;
   addUnitsAndPersist: (
-    units: Array<{ datasheet: depot.Datasheet; modelCost: depot.ModelCost }>
+    units: Array<{ datasheet: depot.Datasheet; modelCost: depot.ModelCost; id?: string }>
   ) => Promise<void>;
   duplicateUnit: (unit: depot.RosterUnit) => void;
   removeUnit: (rosterUnitId: string) => void;

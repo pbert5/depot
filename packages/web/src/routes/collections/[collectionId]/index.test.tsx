@@ -182,6 +182,19 @@ describe('CollectionPage', () => {
     expect(screen.queryByTestId('collection-section-lists')).not.toBeInTheDocument();
   });
 
+  it('passes the active build-state filter to add units', () => {
+    render(
+      <TestWrapper>
+        <CollectionPage />
+      </TestWrapper>
+    );
+
+    fireEvent.click(screen.getByTestId('collection-state-filter-built'));
+    fireEvent.click(screen.getByTestId('add-collection-units-button'));
+
+    expect(mockNavigate).toHaveBeenCalledWith('/collections/collection-1/add-units?state=built');
+  });
+
   it('selects the visible filtered view and clears selection when the filter changes', () => {
     render(<TestWrapper><CollectionPage /></TestWrapper>);
 

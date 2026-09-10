@@ -85,9 +85,13 @@ export const rosterReducer = (state: RosterState, action: RosterAction): RosterS
       });
 
     case 'ADD_UNIT': {
+      if (action.payload.id && state.units.some((unit) => unit.id === action.payload.id)) {
+        return state;
+      }
+
       const normalizedDatasheet = normalizeDatasheetWargear(action.payload.datasheet);
       const newUnit: depot.RosterUnit = {
-        id: createId(),
+        id: action.payload.id ?? createId(),
         datasheet: normalizedDatasheet,
         modelCost: action.payload.modelCost,
         selectedWargear: getDefaultWargearSelection(normalizedDatasheet),

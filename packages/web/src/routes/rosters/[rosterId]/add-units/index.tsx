@@ -31,7 +31,9 @@ const AddRosterUnitsView: FC = () => {
 
   const handleAddSelectedUnits = async (selectedUnits: SelectedUnit[]) => {
     try {
-      await addUnitsAndPersist(selectedUnits);
+      await addUnitsAndPersist(
+        selectedUnits.map(({ id, datasheet, modelCost }) => ({ id, datasheet, modelCost }))
+      );
       showToast({
         type: 'success',
         title: 'Units Added',
