@@ -43,6 +43,7 @@ test.describe('Collection bulk management', () => {
     await page.getByTestId('collection-state-filter-built').click();
     await expect(page.getByTestId('collection-unit-card')).toHaveCount(2);
 
+    await page.getByTestId('toggle-selection-mode').click();
     await page.getByTestId('select-visible-units').click();
     page.once('dialog', (dialog) => dialog.accept());
     await page.getByTestId('bulk-remove').click();
@@ -59,7 +60,6 @@ test.describe('Collection bulk management', () => {
         await route.continue();
       }
     });
-    await page.getByTestId('toggle-selection-mode').click();
     await page.getByTestId('select-visible-units').click();
     await page.getByTestId('bulk-change-state').click();
     page.once('dialog', (dialog) => dialog.accept());

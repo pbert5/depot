@@ -55,7 +55,7 @@ test.describe('Roster from Collection', () => {
 
     await expect(page.getByTestId('datasheet-search')).toBeVisible({ timeout: 30000 });
 
-    const collectionSelections = page.locator('[data-testid^="collection-selection-"]');
+    const collectionSelections = page.locator('[data-testid^="collection-selection-toggle-"]');
     await expect(collectionSelections).toHaveCount(2);
     await collectionSelections.nth(0).click();
     await collectionSelections.nth(1).click();
@@ -103,7 +103,7 @@ test.describe('Roster from Collection', () => {
 
     await page.getByTestId('create-roster-from-collection-button').click();
     await expect(page).toHaveURL(`${collectionUrl}/new-roster`);
-    const selection = page.locator('[data-testid^="collection-selection-"]').first();
+    const selection = page.locator('[data-testid^="collection-selection-toggle-"]').first();
     await selection.click();
     await page.getByRole('button', { name: /Review Selection/i }).click();
     await page.getByTestId('unit-selection-summary').getByRole('button', { name: 'Confirm' }).click();

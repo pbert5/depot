@@ -184,7 +184,14 @@ const installApi = async (page: Page, options: { failFirstPut?: boolean } = {}) 
 };
 
 const prepareSeededPage = async (page: Page) => {
-  await page.goto('/favicon.ico', { waitUntil: 'commit' }).catch(() => {});
+  // Each Playwright test gets an isolated browser context.  Use a same-origin
+  // inert document so IndexedDB is permitted without an application connection
+  // blocking deletion, then reload the real app after seeding.
+  await page.route('**/', async (route) =>
+    route.fulfill({ status: 200, contentType: 'text/html', body: '<!doctype html><html></html>' })
+  );
+  await page.goto('/');
+  await page.unroute('**/');
   await deleteDatabase(page);
   await seedV11(page);
   await page.reload();
@@ -250,6 +257,7 @@ test.describe('IndexedDB server migration', () => {
       await expect.poll(() => api.puts.length).toBe(3);
       await page.reload();
       await expect(page.getByTestId('roster-card')).toContainText(roster.name);
+      await page.goto('/collections');
       await expect(page.getByTestId(`collection-card-${collection.id}`)).toContainText(
         collection.name
       );
