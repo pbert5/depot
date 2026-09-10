@@ -90,12 +90,9 @@ test.describe('Roster add units parity', () => {
   test('back navigation cancels pending units', async ({ page }) => {
     const roster = await openAddUnits(page);
     await add(page, 'Archon', 'archon');
-    const mobileBack = page.getByTestId('mobile-back-button');
-    if (await mobileBack.isVisible().catch(() => false)) {
-      await mobileBack.click();
-    } else {
-      await page.getByRole('link', { name: /Back to/i }).click();
-    }
+    const backLink = page.locator(`a[href="${new URL(roster.rosterEditUrl).pathname}"]`).first();
+    await expect(backLink).toBeVisible();
+    await backLink.click();
     await expect(page).toHaveURL(roster.rosterEditUrl);
     await expect(page.getByTestId('roster-unit-card-archon')).toHaveCount(0);
   });
