@@ -149,18 +149,19 @@ export type { BattlefieldRole };
 
 /** Faction-independent catalogue buckets derived from exact datasheet keywords. */
 export type DatasheetCategory =
-  | 'epic-hero' | 'character' | 'battleline' | 'infantry' | 'mounted' | 'beast'
+  | 'epic-hero' | 'character' | 'battleline' | 'dedicated-transport' | 'infantry' | 'mounted' | 'beast'
   | 'swarm' | 'transport' | 'vehicle' | 'monster' | 'aircraft' | 'fortification' | 'other';
 
 export const DATASHEET_CATEGORY_LABELS: Record<DatasheetCategory, string> = {
   'epic-hero': 'Epic Heroes', character: 'Characters', battleline: 'Battleline',
+  'dedicated-transport': 'Dedicated Transports',
   infantry: 'Infantry', mounted: 'Mounted', beast: 'Beasts', swarm: 'Swarms',
   transport: 'Transports', vehicle: 'Vehicles', monster: 'Monsters', aircraft: 'Aircraft',
   fortification: 'Fortifications', other: 'Other Units'
 };
 
 export const DATASHEET_CATEGORIES: DatasheetCategory[] = [
-  'epic-hero', 'character', 'battleline', 'infantry', 'mounted', 'beast', 'swarm',
+  'epic-hero', 'character', 'battleline', 'dedicated-transport', 'infantry', 'mounted', 'beast', 'swarm',
   'transport', 'vehicle', 'monster', 'aircraft', 'fortification', 'other'
 ];
 
