@@ -2,6 +2,21 @@ import { createSlugGenerator } from './slug.js';
 import type { Datasheet, Wargear, WargearProfile } from '../types/depot.js';
 import type { DatasheetWargear } from '../types/wahapedia.js';
 
+export { parseWargearRules } from './wargear-rules.js';
+export type {
+  ParsedWargearRules,
+  WargearChoice,
+  WargearConflictRule,
+  WargearPrerequisiteRule,
+  WargearQuantityRule,
+  WargearReplacementRule,
+  WargearRule,
+  WargearRuleDiagnostic,
+  WargearRuleKind,
+  WargearRuleProvenance,
+  WargearScope
+} from './wargear-rules.js';
+
 /**
  * Wahapedia separates a weapon from its profile with a hyphen or, far more
  * often, an en dash (`Plasma pistol – supercharge`). Match either, or every

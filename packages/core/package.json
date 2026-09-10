@@ -21,6 +21,11 @@
       "import": "./dist/utils/wargear.js",
       "default": "./dist/utils/wargear.js"
     },
+    "./utils/wargear-rules": {
+      "types": "./dist/utils/wargear-rules.d.ts",
+      "import": "./dist/utils/wargear-rules.js",
+      "default": "./dist/utils/wargear-rules.js"
+    },
     "./utils/abilities": {
       "types": "./dist/utils/abilities.d.ts",
       "import": "./dist/utils/abilities.js",
