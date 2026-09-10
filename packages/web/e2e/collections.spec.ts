@@ -157,7 +157,7 @@ test.describe('Collections', () => {
     expect(await costOptions.count()).toBeGreaterThan(1);
     const targetCost = await costOptions.last().getAttribute('value');
     expect(targetCost).not.toBeNull();
-    await modelCost.selectOption(targetCost!);
+    await modelCost.locator('select').selectOption(targetCost!);
     await page.getByTestId('save-button').click();
 
     await expect(page).toHaveURL(new RegExp(`${collectionUrl}#collection-unit-.+`));
@@ -174,7 +174,7 @@ test.describe('Collections', () => {
     );
     await page.getByTestId('collection-unit-card').click();
     await expect(page.getByLabel('Build state')).toHaveValue('parade-ready');
-    await expect(page.getByTestId('model-cost-select')).toHaveValue(targetCost!);
+    await expect(page.getByTestId('model-cost-select').locator('select')).toHaveValue(targetCost!);
     await expect(wargear).toHaveAttribute('aria-pressed', 'true');
   });
 
