@@ -21,7 +21,11 @@ export const selectFactionAndDetachment = async (
   page: Page,
   factionLabel: string = DEFAULT_FACTION
 ) => {
-  await page.getByLabel('Faction').selectOption({ label: factionLabel });
+  const faction = page.getByLabel('Faction');
+  await expect(faction.locator('option', { hasText: factionLabel })).toBeAttached({
+    timeout: 60000
+  });
+  await faction.selectOption({ label: factionLabel });
   const detachment = page.getByTestId('detachment-field');
   await detachment.waitFor({ state: 'visible' });
   await detachment.getByLabel('Detachment').selectOption({ index: 1 });
