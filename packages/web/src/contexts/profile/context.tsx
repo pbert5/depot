@@ -24,6 +24,9 @@ export const ProfileProvider: FC<{ children: ReactNode }> = ({ children }) => {
       migration.current ??= offlineStorage.migrateLegacyUserData().finally(() => {
         migration.current = null;
       });
+    } catch {
+      // The profile API is unavailable in offline and non-browser runtimes.
+      // Keep any previously loaded profile and allow the rest of the app to render.
     } finally {
       setLoading(false);
     }
