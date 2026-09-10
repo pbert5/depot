@@ -1,6 +1,8 @@
 import type { Datasheet, Detachment, Enhancement, Roster, RosterUnit } from '../types/depot.js';
 import { inCostBracket } from './model-costs.js';
 import { getRosterDetachments } from './roster.js';
+import { getEffectiveKeywords } from './effective-keywords.js';
+import { getBattlefieldRole } from './datasheets.js';
 
 /** Core rules 25.03 battle-size table. */
 export interface BattleSize {
@@ -71,13 +73,35 @@ export const getEligibleEnhancements = (
   unit: RosterUnit,
   roster: Partial<Pick<Roster, 'detachments' | 'detachment'>>
 ): Enhancement[] => {
-  if (hasKeyword(unit.datasheet, 'Epic Hero')) {
+  const effective = {
+    keywords: getEffectiveKeywords(
+      unit.datasheet,
+      getRosterDetachments(roster).flatMap((detachment) => detachment.abilities)
+    )
+  };
+  if (hasKeyword(effective, 'Epic Hero')) {
     return [];
   }
   const pool = getRosterDetachments(roster).flatMap((detachment) => detachment.enhancements);
-  return hasKeyword(unit.datasheet, 'Character')
-    ? pool
-    : pool.filter((enhancement) => enhancement.upgrade);
+  const applicable = (enhancement: Enhancement): boolean =>
+    !enhancement.datasheetIds?.length || enhancement.datasheetIds.includes(unit.datasheet.id);
+  return hasKeyword(effective, 'Character')
+    ? pool.filter(applicable)
+    : pool.filter((enhancement) => enhancement.upgrade && applicable(enhancement));
+};
+
+/** Contextual role shared by roster legality and roster presentation. */
+export const getRosterBattlefieldRole = (
+  unit: Pick<RosterUnit, 'datasheet'>,
+  roster: Partial<Pick<Roster, 'detachments' | 'detachment'>>
+) => {
+  const role = getBattlefieldRole({
+    keywords: getEffectiveKeywords(
+      unit.datasheet,
+      getRosterDetachments(roster).flatMap((detachment) => detachment.abilities)
+    )
+  });
+  return role === 'epic-hero' ? 'character' : role;
 };
 
 export interface RosterIssue {
@@ -149,9 +173,15 @@ export const validateRoster = (roster: Roster): RosterIssue[] => {
 
   for (const [name, count] of countBy(units, (unit) => unit.datasheet.name)) {
     const datasheet = units.find((unit) => unit.datasheet.name === name)!.datasheet;
-    const limit = hasKeyword(datasheet, 'Epic Hero')
+    const effective = {
+      keywords: getEffectiveKeywords(
+        datasheet,
+        detachments.flatMap((detachment) => detachment.abilities)
+      )
+    };
+    const limit = hasKeyword(effective, 'Epic Hero')
       ? 1
-      : hasKeyword(datasheet, 'Battleline') || hasKeyword(datasheet, 'Dedicated Transport')
+      : hasKeyword(effective, 'Battleline') || hasKeyword(effective, 'Dedicated Transport')
         ? size.unitLimit * 2
         : size.unitLimit;
     if (count > limit) {
@@ -221,13 +251,25 @@ export const validateRoster = (roster: Roster): RosterIssue[] => {
   for (const { enhancement, unitId } of roster.enhancements) {
     const unit = units.find((entry) => entry.id === unitId);
     if (!unit) continue;
-    if (hasKeyword(unit.datasheet, 'Epic Hero')) {
+    const effective = {
+      keywords: getEffectiveKeywords(
+        unit.datasheet,
+        detachments.flatMap((detachment) => detachment.abilities)
+      )
+    };
+    if (hasKeyword(effective, 'Epic Hero')) {
       issues.push({
         code: 'enhancement',
         unitId,
         message: `${unit.datasheet.name} is an Epic Hero and cannot take ${enhancement.name}.`
       });
-    } else if (!enhancement.upgrade && !hasKeyword(unit.datasheet, 'Character')) {
+    } else if (enhancement.datasheetIds?.length && !enhancement.datasheetIds.includes(unit.datasheet.id)) {
+      issues.push({
+        code: 'enhancement',
+        unitId,
+        message: `${enhancement.name} is not applicable to ${unit.datasheet.name}.`
+      });
+    } else if (!enhancement.upgrade && !hasKeyword(effective, 'Character')) {
       issues.push({
         code: 'enhancement',
         unitId,

@@ -239,7 +239,7 @@ export const RosterProvider: FC<RosterProviderProps> = ({ children, rosterId }) 
       {children}
       {state.id && (
         <div
-          className="fixed bottom-3 right-3 z-20 flex items-center gap-2 rounded-sm border border-border-strong bg-surface-card px-3 py-2 text-xs text-subtle shadow-lg"
+          className="pointer-events-none fixed bottom-3 right-3 z-20 flex items-center gap-2 rounded-sm border border-border-strong bg-surface-card px-3 py-2 text-xs text-subtle shadow-lg"
           data-testid="roster-save-status"
           aria-live="polite"
         >
@@ -247,7 +247,7 @@ export const RosterProvider: FC<RosterProviderProps> = ({ children, rosterId }) 
           {saveState === 'failed' && (
             <button
               type="button"
-              className="font-bold text-accent-600 underline"
+              className="pointer-events-auto font-bold text-accent-600 underline"
               onClick={retrySave}
             >
               Retry

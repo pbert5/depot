@@ -20,9 +20,9 @@ import { getRosterSubtitle } from '@depot/core/utils/roster';
 import { validateRoster } from '@depot/core/utils/roster-legality';
 import {
   BATTLEFIELD_ROLES,
-  BATTLEFIELD_ROLE_LABELS,
-  getBattlefieldRole
+  BATTLEFIELD_ROLE_LABELS
 } from '@depot/core/utils/datasheets';
+import { getRosterBattlefieldRole } from '@depot/core/utils/roster-legality';
 import RosterIssues from '@/routes/rosters/_components/roster-issues';
 
 const unitPoints = (unit: depot.RosterUnit) => parseInt(unit.modelCost.cost, 10) || 0;
@@ -34,7 +34,7 @@ const RosterEdit: FC = () => {
   const sections = useMemo(() => {
     const byRole = new Map<string, depot.RosterUnit[]>();
     for (const unit of roster.units) {
-      const role = getBattlefieldRole(unit.datasheet);
+      const role = getRosterBattlefieldRole(unit, roster);
       byRole.set(role, [...(byRole.get(role) ?? []), unit]);
     }
     return BATTLEFIELD_ROLES.filter((role) => byRole.has(role)).map((role) => {
@@ -47,7 +47,7 @@ const RosterEdit: FC = () => {
         points: units.reduce((total, unit) => total + unitPoints(unit), 0)
       };
     });
-  }, [roster.units]);
+  }, [roster]);
 
   const issuesByUnit = useMemo(() => {
     const map = new Map<string, string[]>();

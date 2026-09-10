@@ -184,7 +184,7 @@ const installApi = async (page: Page, options: { failFirstPut?: boolean } = {}) 
 };
 
 const prepareSeededPage = async (page: Page) => {
-  await page.goto('/favicon.ico');
+  await page.goto('/favicon.ico', { waitUntil: 'commit' }).catch(() => {});
   await deleteDatabase(page);
   await seedV11(page);
   await page.reload();

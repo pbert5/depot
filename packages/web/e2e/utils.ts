@@ -4,7 +4,22 @@ import type { Page } from '@playwright/test';
 const DEFAULT_FACTION = 'Drukhari';
 
 export const resetClientState = async (page: Page) => {
-  await page.goto('/');
+  await page.goto('/favicon.ico', { waitUntil: 'commit' }).catch(() => {});
+  // The isolated E2E API uses a reserved disposable user. Clear its remote
+  // documents as well as browser state so tests cannot observe earlier tests.
+  await page.evaluate(async () => {
+    for (const kind of ['rosters', 'collections']) {
+      const response = await fetch(`/api/${kind}`, { cache: 'no-store' }).catch(() => null);
+      if (!response?.ok) continue;
+      const documents = (await response.json()) as Array<{ id?: string }>;
+      await Promise.all(
+        documents
+          .map((document) => document.id)
+          .filter((id): id is string => Boolean(id))
+          .map((id) => fetch(`/api/${kind}/${encodeURIComponent(id)}`, { method: 'DELETE' }))
+      );
+    }
+  });
   await page.evaluate(async () => {
     await new Promise<void>((resolve) => {
       const request = indexedDB.deleteDatabase('depot-offline');

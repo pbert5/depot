@@ -8,6 +8,7 @@ import {
   getUnitOrdinal,
   validateRoster
 } from './roster-legality.js';
+import { getEffectiveKeywords } from './effective-keywords.js';
 
 const datasheet = (overrides: Partial<Datasheet> & { id: string }): Datasheet =>
   ({
@@ -125,6 +126,22 @@ describe('getBattleSize', () => {
     expect(getBattleSize(500).name).toBe('Incursion');
     expect(getBattleSize(2000).dp).toBe(3);
     expect(getBattleSize(3000).name).toBe('Strike Force');
+  });
+});
+
+describe('effective roster keywords', () => {
+  it('applies a contextual detachment grant without mutating the datasheet', () => {
+    const gretchin = datasheet({ id: 'gretchin', keywords: kw('Gretchin', 'Infantry') });
+    const ability = {
+      id: 'runt-swarm',
+      description: 'Friendly GRETCHIN units gain the BATTLELINE keyword.'
+    };
+    expect(getEffectiveKeywords(gretchin, [ability]).map((entry) => entry.keyword)).toEqual([
+      'Gretchin',
+      'Infantry',
+      'BATTLELINE'
+    ]);
+    expect(gretchin.keywords.map((entry) => entry.keyword)).toEqual(['Gretchin', 'Infantry']);
   });
 });
 

@@ -79,6 +79,8 @@ export interface Enhancement {
   detachment: string;
   upgrade?: boolean;
   supportLeader?: string;
+  /** Datasheets explicitly linked by Datasheets_enhancements.csv. */
+  datasheetIds?: string[];
 }
 
 export interface DetachmentAbility {
@@ -88,6 +90,7 @@ export interface DetachmentAbility {
   legend: string;
   description: string;
   detachment: string;
+  keywordGrants?: import('../utils/effective-keywords.js').KeywordGrant[];
 }
 
 export interface Datasheet {
@@ -137,7 +140,7 @@ export interface Datasheet {
 }
 
 /** Grouping bucket for a datasheet; derived from its keywords. */
-export type BattlefieldRole = 'epic-hero' | 'character' | 'battleline' | 'other';
+export type BattlefieldRole = 'epic-hero' | 'character' | 'battleline' | 'dedicated-transport' | 'other';
 
 export interface DatasheetSummary {
   id: string;

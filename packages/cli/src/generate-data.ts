@@ -118,6 +118,7 @@ const buildFactionData = (
     chapterDp: data.detachmentChapterDp,
     abilities: data.detachmentAbilities.filter((da) => da.factionId === faction.id),
     enhancements: data.enhancements.filter((enhancement) => enhancement.factionId === faction.id),
+    datasheetEnhancements: data.datasheetEnhancements,
     stratagems: data.stratagems.filter((strat) => strat.factionId === faction.id),
     createSlug: createSlugGenerator(`${factionSlug}-detachment`)
   });

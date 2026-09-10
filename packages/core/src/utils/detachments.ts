@@ -1,6 +1,7 @@
 import type { Detachment, DetachmentAbility, Enhancement, Stratagem } from '../types/depot.js';
 import type * as wahapedia from '../types/wahapedia.js';
 import { sortByName } from './common.js';
+import { parseKeywordGrants } from './effective-keywords.js';
 
 export const toDepotEnhancement = (enhancement: wahapedia.Enhancement): Enhancement => ({
   id: enhancement.id,
@@ -35,7 +36,10 @@ export const toDepotDetachmentAbility = (
   name: ability.name,
   legend: ability.legend,
   description: ability.description,
-  detachment: ability.detachment
+  detachment: ability.detachment,
+  ...(parseKeywordGrants(ability.description, ability.id).length > 0
+    ? { keywordGrants: parseKeywordGrants(ability.description, ability.id) }
+    : {})
 });
 
 const shortIdSuffix = (id: string): string => id.replace(/^0+/, '').slice(-4) || id.slice(-4);
@@ -46,6 +50,7 @@ export interface BuildFactionDetachmentsInput {
   chapterDp: wahapedia.DetachmentChapterDp[];
   abilities: wahapedia.DetachmentAbility[];
   enhancements: wahapedia.Enhancement[];
+  datasheetEnhancements?: wahapedia.DatasheetEnhancement[];
   stratagems: wahapedia.Stratagem[];
   createSlug: (value: string) => string;
 }
@@ -56,6 +61,7 @@ export const buildFactionDetachments = ({
   chapterDp,
   abilities,
   enhancements,
+  datasheetEnhancements = [],
   stratagems,
   createSlug
 }: BuildFactionDetachmentsInput): Detachment[] => {
@@ -83,7 +89,12 @@ export const buildFactionDetachments = ({
       enhancements: sortByName(
         enhancements
           .filter((enhancement) => enhancement.detachmentId === row.id)
-          .map(toDepotEnhancement)
+          .map((enhancement) => {
+            const linked = datasheetEnhancements
+              .filter((entry) => entry.enhancementId === enhancement.id)
+              .map((entry) => entry.datasheetId);
+            return { ...toDepotEnhancement(enhancement), ...(linked.length ? { datasheetIds: linked } : {}) };
+          })
       ),
       stratagems: sortByName(
         stratagems.filter((stratagem) => stratagem.detachmentId === row.id).map(toDepotStratagem)

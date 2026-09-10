@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import type { depot } from '@depot/core';
-import { validateRoster } from '@depot/core/utils/roster-legality';
+import { getRosterBattlefieldRole, validateRoster } from '@depot/core/utils/roster-legality';
+import { BATTLEFIELD_ROLES, BATTLEFIELD_ROLE_LABELS } from '@depot/core/utils/datasheets';
 import { RosterEmptyState, RosterSection } from '@/components/shared';
 import ViewRosterUnitCard from './view-roster-unit-card';
 
@@ -11,10 +12,17 @@ interface UnitsTabProps {
 const UnitsTab: React.FC<UnitsTabProps> = ({ roster }) => {
   const { units } = roster;
 
-  const sortedUnits = useMemo(
-    () => [...units].sort((a, b) => a.datasheet.name.localeCompare(b.datasheet.name)),
-    [units]
-  );
+  const sections = useMemo(() => {
+    const byRole = new Map<string, depot.RosterUnit[]>();
+    for (const unit of units) {
+      const role = getRosterBattlefieldRole(unit, roster);
+      byRole.set(role, [...(byRole.get(role) ?? []), unit]);
+    }
+    return BATTLEFIELD_ROLES.filter((role) => byRole.has(role)).map((role) => {
+      const grouped = [...byRole.get(role)!].sort((a, b) => a.datasheet.name.localeCompare(b.datasheet.name));
+      return { role, units: grouped, points: grouped.reduce((sum, unit) => sum + (parseInt(unit.modelCost.cost, 10) || 0), 0) };
+    });
+  }, [roster, units]);
 
   // Legality issues carry an optional unitId — surface those on the unit itself
   // rather than only in the roster-level summary.
@@ -38,19 +46,15 @@ const UnitsTab: React.FC<UnitsTabProps> = ({ roster }) => {
 
   return (
     <div className="flex flex-col gap-4" data-testid="units-tab">
-      <RosterSection title={`Units (${sortedUnits.length})`}>
-        <div className="flex flex-col gap-4">
-          {sortedUnits.map((unit) => (
-            <ViewRosterUnitCard
-              key={unit.id}
-              unit={unit}
-              isWarlord={roster.warlordUnitId === unit.id}
-              enhancementName={enhancementsByUnit.get(unit.id)}
-              issues={issuesByUnit.get(unit.id)}
-            />
-          ))}
-        </div>
-      </RosterSection>
+      {sections.map(({ role, units: grouped, points }) => (
+        <RosterSection key={role} title={BATTLEFIELD_ROLE_LABELS[role]} count={`${grouped.length} · ${points} PTS`}>
+          <div className="flex flex-col gap-4">
+            {grouped.map((unit) => (
+              <ViewRosterUnitCard key={unit.id} unit={unit} isWarlord={roster.warlordUnitId === unit.id} enhancementName={enhancementsByUnit.get(unit.id)} issues={issuesByUnit.get(unit.id)} />
+            ))}
+          </div>
+        </RosterSection>
+      ))}
     </div>
   );
 };

@@ -168,14 +168,15 @@ export const BATTLEFIELD_ROLE_LABELS: Record<BattlefieldRole, string> = {
   'epic-hero': 'Epic Heroes',
   character: 'Characters',
   battleline: 'Battleline',
+  'dedicated-transport': 'Dedicated Transports',
   other: 'Other Units'
 };
 
 /** Order sections appear in, matching how a list is read top-down. */
 export const BATTLEFIELD_ROLES: BattlefieldRole[] = [
-  'epic-hero',
   'character',
   'battleline',
+  'dedicated-transport',
   'other'
 ];
 
@@ -197,6 +198,7 @@ export const getBattlefieldRole = (datasheet: Pick<Datasheet, 'keywords'>): Batt
   if (hasKeyword(datasheet, 'Epic Hero')) return 'epic-hero';
   if (hasKeyword(datasheet, 'Character')) return 'character';
   if (hasKeyword(datasheet, 'Battleline')) return 'battleline';
+  if (hasKeyword(datasheet, 'Dedicated Transport')) return 'dedicated-transport';
   return 'other';
 };
 

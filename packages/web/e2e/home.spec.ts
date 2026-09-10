@@ -1,6 +1,9 @@
 import { test, expect } from '@playwright/test';
+import { resetClientState } from './utils';
 
 test.describe('Home', () => {
+  test.beforeEach(async ({ page }) => resetClientState(page));
+
   test('shows the hero when no local data', async ({ page }) => {
     await page.goto('/');
 
