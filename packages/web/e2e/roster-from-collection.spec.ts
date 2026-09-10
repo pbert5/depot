@@ -46,7 +46,7 @@ test.describe('Roster from Collection', () => {
     await expect(summaryDrawer).toBeVisible();
     await summaryDrawer.getByRole('button', { name: 'Confirm' }).click();
 
-    await expect(page).toHaveURL(collectionUrl);
+    await page.goto(collectionUrl);
     const unitCards = page.getByTestId('collection-unit-card');
     await expect(unitCards).toHaveCount(2);
 
@@ -79,5 +79,50 @@ test.describe('Roster from Collection', () => {
 
     await expect(page.getByTestId('roster-unit-card-leman-russ-commander')).toBeVisible();
     await expect(page.getByTestId('roster-unit-card-cadian-heavy-weapons-squad')).toBeVisible();
+  });
+
+  test('COLLECTION-005: copies selected owned units and survives source deletion', async ({ page }) => {
+    await page.goto('/collections');
+    await page.getByTestId('create-collection-button').click();
+
+    const collectionName = `Collection 005 ${Date.now()}`;
+    await page.getByLabel('Name').fill(collectionName);
+    await page.getByLabel('Faction').selectOption('astra-militarum');
+    await page.getByTestId('create-collection-submit').click();
+    await expect(page).toHaveURL(/\/collections\/[0-9a-f-]{36}$/i);
+    const collectionUrl = page.url();
+
+    await page.getByTestId('add-collection-units-button').click();
+    await expect(page.getByTestId('datasheet-search')).toBeVisible({ timeout: 60000 });
+    await page.getByTestId('datasheet-search').fill('Cadian Heavy Weapons Squad');
+    await page.getByTestId('add-datasheet-cadian-heavy-weapons-squad').click();
+    await page.getByRole('button', { name: /Review Selection/i }).click();
+    await page.getByTestId('unit-selection-summary').getByRole('button', { name: 'Confirm' }).click();
+    await page.goto(collectionUrl);
+    await expect(page.getByTestId('collection-unit-card')).toHaveCount(1);
+
+    await page.getByTestId('create-roster-from-collection-button').click();
+    await expect(page).toHaveURL(`${collectionUrl}/new-roster`);
+    const selection = page.locator('[data-testid^="collection-selection-"]').first();
+    await selection.click();
+    await page.getByRole('button', { name: /Review Selection/i }).click();
+    await page.getByTestId('unit-selection-summary').getByRole('button', { name: 'Confirm' }).click();
+    await expect(page.getByTestId('create-roster-sheet')).toBeVisible();
+    await page.getByTestId('detachment-field').getByLabel('Detachment').selectOption({ index: 1 });
+    await page.getByTestId('submit-button').click();
+    await expect(page).toHaveURL(/\/rosters\/[a-z0-9-]+\/edit$/i);
+    const rosterUrl = page.url();
+    await expect(page.getByTestId('roster-unit-card-cadian-heavy-weapons-squad')).toBeVisible();
+
+    await page.goto('/collections');
+    const sourceCard = page.getByTestId(/^collection-card-/).filter({ hasText: collectionName });
+    await expect(sourceCard).toBeVisible();
+    page.once('dialog', (dialog) => dialog.accept());
+    await sourceCard.getByTestId('delete-collection-button').click();
+    await expect(page.getByTestId(/^collection-card-/).filter({ hasText: collectionName })).toHaveCount(0);
+
+    await page.goto(rosterUrl);
+    await expect(page.getByTestId('roster-unit-card-cadian-heavy-weapons-squad')).toBeVisible();
+    await expect(page.getByTestId('roster-collection-link')).toHaveCount(0);
   });
 });

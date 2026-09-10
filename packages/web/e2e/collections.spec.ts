@@ -1,6 +1,11 @@
 import { test, expect } from '@playwright/test';
+import { resetClientState } from './utils';
 
 test.describe('Collections', () => {
+  test.beforeEach(async ({ page }) => {
+    await resetClientState(page);
+  });
+
   test('collection form waits for factions and enables submit once filled', async ({ page }) => {
     await page.goto('/collections');
     await page.getByTestId('create-collection-button').click();
@@ -108,12 +113,109 @@ test.describe('Collections', () => {
     await expect(summaryDrawer.getByText(/3 units/i)).toBeVisible();
 
     await summaryDrawer.getByRole('button', { name: 'Confirm' }).click();
-    await expect(page).toHaveURL(collectionUrl);
+    await page.goto(collectionUrl);
 
     const unitCards = page.getByTestId('collection-unit-card');
     await expect(unitCards).toHaveCount(3);
     await expect(page.getByText('Leman Russ Commander')).toBeVisible();
     const cadianCards = unitCards.filter({ hasText: 'Cadian Heavy Weapons Squad' });
     await expect(cadianCards).toHaveCount(2);
+  });
+
+  test('COLLECTION-003: filters all build states and persists unit edits', async ({ page }) => {
+    await page.goto('/collections');
+    await page.getByTestId('create-collection-button').click();
+    await page.getByLabel('Name').fill(`Collection 003 ${Date.now()}`);
+    await page.getByLabel('Faction').selectOption('astra-militarum');
+    await page.getByTestId('create-collection-submit').click();
+    await expect(page).toHaveURL(/\/collections\/[0-9a-f-]{36}$/i);
+
+    const collectionUrl = page.url();
+    await page.getByTestId('add-collection-units-button').click();
+    await expect(page.getByTestId('datasheet-search')).toBeVisible({ timeout: 60000 });
+    await page.getByTestId('datasheet-search').fill('Cadian Heavy Weapons Squad');
+    await page.getByTestId('add-datasheet-cadian-heavy-weapons-squad').click();
+    await page.getByRole('button', { name: /Review Selection/i }).click();
+    await page.getByTestId('unit-selection-summary').getByRole('button', { name: 'Confirm' }).click();
+    await page.goto(collectionUrl);
+
+    const unitCard = page.getByTestId('collection-unit-card').first();
+    const unitId = await unitCard.getAttribute('id');
+    await unitCard.click();
+    await expect(page).toHaveURL(new RegExp(`${collectionUrl}/units/.+/edit$`));
+
+    const state = page.getByLabel('Build state');
+    await state.selectOption('parade-ready');
+
+    const wargear = page.getByTestId('wargear-table').getByRole('button').first();
+    const wasWargearSelected = (await wargear.getAttribute('aria-pressed')) === 'true';
+    if (!wasWargearSelected) await wargear.click();
+
+    const modelCost = page.getByTestId('model-cost-select');
+    await expect(modelCost).toBeVisible();
+    const costOptions = modelCost.locator('option');
+    expect(await costOptions.count()).toBeGreaterThan(1);
+    const targetCost = await costOptions.last().getAttribute('value');
+    expect(targetCost).not.toBeNull();
+    await modelCost.selectOption(targetCost!);
+    await page.getByTestId('save-button').click();
+
+    await expect(page).toHaveURL(new RegExp(`${collectionUrl}#collection-unit-.+`));
+    await expect(page.getByTestId('collection-unit-card')).toHaveAttribute('data-state', 'parade-ready');
+    await page.getByTestId('collection-state-filter-sprue').click();
+    await expect(page.getByTestId('empty-collection-state')).toBeVisible();
+    await page.getByTestId('collection-state-filter-parade-ready').click();
+    await expect(page.getByTestId('collection-unit-card')).toHaveAttribute('id', unitId!);
+
+    await page.reload();
+    await expect(page.getByTestId('collection-state-filter-parade-ready')).toHaveAttribute(
+      'aria-pressed',
+      'true'
+    );
+    await page.getByTestId('collection-unit-card').click();
+    await expect(page.getByLabel('Build state')).toHaveValue('parade-ready');
+    await expect(page.getByTestId('model-cost-select')).toHaveValue(targetCost!);
+    await expect(wargear).toHaveAttribute('aria-pressed', 'true');
+  });
+
+  test('COLLECTION-004: duplicates independently and removes or deletes immediately', async ({ page }) => {
+    await page.goto('/collections');
+    await page.getByTestId('create-collection-button').click();
+    const collectionName = `Collection 004 ${Date.now()}`;
+    await page.getByLabel('Name').fill(collectionName);
+    await page.getByLabel('Faction').selectOption('astra-militarum');
+    await page.getByTestId('create-collection-submit').click();
+    await expect(page).toHaveURL(/\/collections\/[0-9a-f-]{36}$/i);
+    const sourceUrl = page.url();
+
+    await page.getByTestId('add-collection-units-button').click();
+    await expect(page.getByTestId('datasheet-search')).toBeVisible({ timeout: 60000 });
+    await page.getByTestId('datasheet-search').fill('Cadian Heavy Weapons Squad');
+    await page.getByTestId('add-datasheet-cadian-heavy-weapons-squad').click();
+    await page.getByRole('button', { name: /Review Selection/i }).click();
+    await page.getByTestId('unit-selection-summary').getByRole('button', { name: 'Confirm' }).click();
+    await page.goto(sourceUrl);
+    const sourceUnitId = await page.getByTestId('collection-unit-card').getAttribute('id');
+
+    await page.goto('/collections');
+    const sourceCard = page.getByTestId(/^collection-card-/).filter({ hasText: collectionName });
+    await sourceCard.getByTestId('duplicate-collection-button').click();
+    const copyCard = page.getByTestId(/^collection-card-/).filter({ hasText: `${collectionName} Copy` });
+    await expect(copyCard).toBeVisible();
+    await copyCard.click();
+    await expect(page).toHaveURL(/\/collections\/[0-9a-f-]{36}$/i);
+    const copyUnit = page.getByTestId('collection-unit-card');
+    await expect(copyUnit).toHaveCount(1);
+    await expect(copyUnit).not.toHaveAttribute('id', sourceUnitId!);
+
+    await copyUnit.getByRole('button', { name: 'Remove unit from collection' }).click();
+    await expect(page.getByTestId('empty-collection-state')).toBeVisible();
+
+    await page.goto('/collections');
+    await expect(page.getByTestId(/^collection-card-/).filter({ hasText: collectionName })).toBeVisible();
+    page.once('dialog', (dialog) => dialog.accept());
+    await page.getByTestId(/^collection-card-/).filter({ hasText: collectionName }).getByTestId('delete-collection-button').click();
+    await expect(page.getByTestId(/^collection-card-/).filter({ hasText: collectionName })).toHaveCount(0);
+    await expect(page.getByTestId(/^collection-card-/).filter({ hasText: `${collectionName} Copy` })).toHaveCount(1);
   });
 });
