@@ -109,12 +109,12 @@ const readClientState = (page: Page) =>
         request.onerror = () => reject(request.error);
         request.onsuccess = () => {
           const db = request.result;
-          const transaction = db.transaction(['rosters', 'collections', 'userData']);
-          const rosterRequest = transaction.objectStore('rosters').get('migration-roster-11111111');
+          const transaction = db.transaction(['rosters', 'collections', 'userData', 'scopedRosters', 'scopedCollections']);
+          const rosterRequest = transaction.objectStore('scopedRosters').get('00000000-0000-0000-0000-000000000001:migration-roster-11111111');
           const collectionRequest = transaction
-            .objectStore('collections')
-            .get('migration-collection-22222222');
-          const markerRequest = transaction.objectStore('userData').get(markerKey);
+            .objectStore('scopedCollections')
+            .get('00000000-0000-0000-0000-000000000001:migration-collection-22222222');
+          const markerRequest = transaction.objectStore('userData').get(`${markerKey}:server:collection:migration-collection-22222222`);
           transaction.oncomplete = () => {
             db.close();
             resolve({
