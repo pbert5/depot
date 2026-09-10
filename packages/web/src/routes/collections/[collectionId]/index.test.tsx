@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { depot } from '@depot/core';
 
@@ -141,5 +141,18 @@ describe('CollectionPage', () => {
     expect(screen.getByTestId('add-collection-units-button')).toBeInTheDocument();
     expect(screen.queryByTestId('create-roster-from-collection-button')).not.toBeInTheDocument();
     expect(screen.queryByTestId('collection-section-lists')).not.toBeInTheDocument();
+  });
+
+  it('passes the active build-state filter to add units', () => {
+    render(
+      <TestWrapper>
+        <CollectionPage />
+      </TestWrapper>
+    );
+
+    fireEvent.click(screen.getByTestId('collection-state-filter-built'));
+    fireEvent.click(screen.getByTestId('add-collection-units-button'));
+
+    expect(mockNavigate).toHaveBeenCalledWith('/collections/collection-1/add-units?state=built');
   });
 });

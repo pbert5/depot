@@ -15,6 +15,11 @@ export const COLLECTION_UNIT_STATES: CollectionUnitState[] = [
   'parade-ready'
 ];
 
+export const getCollectionUnitState = (value?: string | null): CollectionUnitState =>
+  COLLECTION_UNIT_STATES.includes(value as CollectionUnitState)
+    ? (value as CollectionUnitState)
+    : 'sprue';
+
 export type CollectionStateCounts = Record<CollectionUnitState, number>;
 
 export const getCollectionStateCounts = (items: CollectionUnit[]): CollectionStateCounts => {
@@ -36,13 +41,14 @@ export const calculateCollectionPoints = (collection: Collection): number => {
 
 export const createCollectionUnitFromDatasheet = (
   datasheet: Datasheet,
-  modelCost: ModelCost
+  modelCost: ModelCost,
+  initialState?: string | null
 ): CollectionUnit => ({
   id: createId(),
   datasheet,
   modelCost,
   selectedWargear: getDefaultWargearSelection(datasheet),
   selectedWargearAbilities: [],
-  state: 'sprue',
+  state: getCollectionUnitState(initialState),
   datasheetSlug: datasheet.slug
 });

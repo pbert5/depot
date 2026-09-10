@@ -4,6 +4,7 @@ import {
   COLLECTION_UNIT_STATES,
   calculateCollectionPoints,
   createCollectionUnitFromDatasheet,
+  getCollectionUnitState,
   getCollectionStateCounts
 } from './collection.js';
 
@@ -98,14 +99,22 @@ describe('collection utils', () => {
     expect(calculateCollectionPoints(collection)).toBe(245);
   });
 
-  it('creates collection units from datasheets with sane defaults', () => {
+  it('normalizes collection unit states for the add-units contract', () => {
+    expect(COLLECTION_UNIT_STATES.map((state) => getCollectionUnitState(state))).toEqual(
+      COLLECTION_UNIT_STATES
+    );
+    expect(getCollectionUnitState('unknown')).toBe('sprue');
+    expect(getCollectionUnitState(null)).toBe('sprue');
+  });
+
+  it('creates collection units from datasheets with the requested initial state', () => {
     const datasheet = createDatasheet({
       wargear: [],
       loadout: 'Every model is equipped with: Bolt pistol.'
     });
-    const result = createCollectionUnitFromDatasheet(datasheet, createModelCost());
+    const result = createCollectionUnitFromDatasheet(datasheet, createModelCost(), 'built');
 
-    expect(result.state).toBe('sprue');
+    expect(result.state).toBe('built');
     expect(result.datasheetSlug).toBe(datasheet.slug);
     expect(result.id).toBeTruthy();
     expect(COLLECTION_UNIT_STATES).toContain(result.state);

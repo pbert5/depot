@@ -1,5 +1,5 @@
 import type { FC } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useSearchParams } from 'react-router-dom';
 import { useNavigate } from '@/lib/navigation';
 
 import AppLayout from '@/components/layout';
@@ -15,6 +15,7 @@ import {
 
 const AddCollectionUnitsView: FC<{ collectionId?: string }> = ({ collectionId }) => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { showToast } = useToast();
   const { collection, loading, error, save } = useCollection(collectionId);
 
@@ -52,7 +53,7 @@ const AddCollectionUnitsView: FC<{ collectionId?: string }> = ({ collectionId })
     if (!collection || selectedUnits.length === 0) return;
 
     const newUnits = selectedUnits.map(({ datasheet, modelCost }) =>
-      createCollectionUnitFromDatasheet(datasheet, modelCost)
+      createCollectionUnitFromDatasheet(datasheet, modelCost, searchParams.get('state'))
     );
     const updated = {
       ...collection,
