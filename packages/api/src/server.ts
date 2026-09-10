@@ -50,11 +50,19 @@ const sameOrigin = (req: IncomingMessage): string | null => {
 
 async function requestProfile(req: IncomingMessage): Promise<string> {
   sameOrigin(req);
-  const requested = req.headers['x-depot-profile-id'] ?? cookies(req)[profileCookie] ?? defaultUserId;
+  const explicitHeader = req.headers['x-depot-profile-id'] !== undefined;
+  const cookieId = cookies(req)[profileCookie];
+  const requested = req.headers['x-depot-profile-id'] ?? cookieId ?? defaultUserId;
   const id = Array.isArray(requested) ? requested[0] : requested;
   if (!id || !uuidPattern.test(id)) throw Object.assign(new Error('invalid profile identity'), { status: 400 });
   const result = await pool.query('SELECT 1 FROM users WHERE id = $1', [id]);
-  if (!result.rowCount) throw Object.assign(new Error('profile not found'), { status: 404 });
+  if (!result.rowCount) {
+    if (!explicitHeader && cookieId) {
+      const fallback = await pool.query('SELECT 1 FROM users WHERE id = $1', [defaultUserId]);
+      if (fallback.rowCount) return defaultUserId;
+    }
+    throw Object.assign(new Error('profile not found'), { status: 404 });
+  }
   return id;
 }
 
@@ -216,7 +224,14 @@ async function handle(req: IncomingMessage, res: ServerResponse) {
   return json(res, 404, { error: 'not found' });
 }
 
+const ensureDefaultProfile = async () => {
+  await pool.query(
+    'INSERT INTO users (id, display_name) VALUES ($1, $2) ON CONFLICT (id) DO NOTHING',
+    [defaultUserId, defaultUserId === '00000000-0000-0000-0000-000000000001' ? 'Local User' : 'Depot User']
+  );
+};
+
 const server = createServer((req, res) => { void handle(req, res).catch((error: unknown) => json(res, Number((error as { status?: number }).status ?? 400), { error: error instanceof Error ? error.message : 'request failed' })); });
-server.listen(port, '0.0.0.0', () => console.log(`Depot API listening on ${port}`));
+void ensureDefaultProfile().then(() => server.listen(port, '0.0.0.0', () => console.log(`Depot API listening on ${port}`))).catch((error) => { console.error('Unable to seed default profile', error); process.exitCode = 1; });
 
 export { bundle, validateDocument };
