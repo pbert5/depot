@@ -2,6 +2,7 @@ import { test, expect } from './fixtures';
 import { resetClientState } from './utils';
 
 test('reset only deletes the current worker profile documents', async ({ page }) => {
+  await page.goto('/');
   const otherProfile = await page.evaluate(async () => {
     const response = await fetch('/api/profiles', {
       method: 'POST', headers: { 'content-type': 'application/json' },

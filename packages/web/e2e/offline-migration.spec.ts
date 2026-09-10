@@ -246,13 +246,15 @@ test.describe('IndexedDB server migration', () => {
 
       await page.goto('/rosters');
       await expect(page.getByTestId('empty-rosters')).toBeVisible();
-      await expect.poll(() => api.puts.length).toBe(1);
+      // The migration retries each legacy document independently: the first
+      // roster PUT fails, but the collection PUT is still attempted safely.
+      await expect.poll(() => api.puts.length).toBe(2);
       const failedState = await readClientState(page);
       expect(failedState.version).toBe(CURRENT_DB_VERSION);
       expect(failedState.roster).toEqual(roster);
       expect(failedState.collection).toEqual(collection);
       expect(failedState.marker).toBeUndefined();
-      expect(api.puts).toHaveLength(1);
+      expect(api.puts).toHaveLength(2);
 
       await page.reload();
       await expect.poll(() => api.puts.length).toBe(3);
