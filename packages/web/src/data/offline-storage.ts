@@ -33,7 +33,11 @@ const apiRequest = async <T>(path: string, init?: RequestInit): Promise<T> => {
     ...init,
     headers: { 'content-type': 'application/json', ...(init?.headers ?? {}) }
   });
-  if (!response.ok) throw new Error(`Depot API ${response.status}`);
+  if (!response.ok) {
+    const error = new Error(`Depot API ${response.status}`) as Error & { status?: number };
+    error.status = response.status;
+    throw error;
+  }
   return (response.status === 204 ? undefined : await response.json()) as T;
 };
 
@@ -250,7 +254,10 @@ class OfflineStorage {
     }
   }
 
-  async saveCollection(collection: depot.Collection): Promise<void> {
+  async saveCollection(
+    collection: depot.Collection,
+    options: { fallbackOnHttpError?: boolean } = {}
+  ): Promise<void> {
     const document = stampTimestamps(toStoredCollection(normalizeCollection(collection)));
     try {
       await apiRequest(`/collections/${encodeURIComponent(document.id)}`, {
@@ -258,7 +265,15 @@ class OfflineStorage {
         body: JSON.stringify(document)
       });
       return;
-    } catch {
+    } catch (error) {
+      if (
+        error &&
+        typeof error === 'object' &&
+        'status' in error &&
+        options.fallbackOnHttpError === false
+      ) {
+        throw error;
+      }
       // Keep a local draft if the server is temporarily unavailable.
     }
     const store = await this.store(STORES.COLLECTIONS, 'readwrite');

@@ -20,7 +20,9 @@ export const useCollection = (collectionId?: string) => {
         dataVersion: updated.dataVersion ?? null,
         points: { current: calculateCollectionPoints(updated) }
       };
-      await offlineStorage.saveCollection(withPoints);
+      // A rejected online write must not make a bulk action appear successful.
+      // Network failures still retain the existing local-draft fallback.
+      await offlineStorage.saveCollection(withPoints, { fallbackOnHttpError: false });
       setData(withPoints);
     },
     [setData]
