@@ -57,6 +57,32 @@ describe('DetachmentPage', () => {
     expect(screen.getByTestId('detachment-not-found')).toBeInTheDocument();
   });
 
+  it('routes nested detachment navigation back to its detachment list', () => {
+    render(
+      <TestWrapper>
+        <DetachmentPage />
+      </TestWrapper>
+    );
+
+    expect(screen.getByTestId('mobile-back-button')).toHaveAttribute(
+      'href',
+      '/faction/space-marines/detachments'
+    );
+  });
+
+  it('renders a retryable error state when the faction fails to load', () => {
+    mockedUseFaction.mockReturnValue({ data: undefined, loading: false, error: 'network failed' });
+    render(
+      <TestWrapper>
+        <DetachmentPage />
+      </TestWrapper>
+    );
+
+    expect(screen.getByTestId('detachment-error')).toHaveTextContent('Failed to Load Detachment');
+    expect(screen.getByRole('button', { name: 'Try Again' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Back to Home' })).toHaveAttribute('href', '/');
+  });
+
   it('shows the loader while the faction loads', () => {
     mockedUseFaction.mockReturnValue({ data: undefined, loading: true, error: null });
     render(

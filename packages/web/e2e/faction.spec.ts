@@ -20,6 +20,8 @@ test.describe('Faction detail', () => {
 
     await expect(datasheetsTab).toBeVisible();
     await expect(detachmentsTab).toBeVisible();
+    await expect(page.getByTestId('bookmark-faction-button')).toBeVisible();
+    await expect(page.getByTestId('share-faction')).toBeVisible();
 
     const datasheetLinks = page.locator('a[href*="/datasheet/"]');
     expect(await datasheetLinks.count()).toBeGreaterThan(0);
@@ -59,6 +61,12 @@ test.describe('Faction detail', () => {
       /Take and Hold|Disruption|Purge the Foe|Priority Assets|Reconnaissance/
     );
     await expect(page.getByTestId('detachment-stratagems')).toBeVisible();
+    await expect(page.getByTestId('share-detachment')).toBeVisible();
+    await expect(page.getByTestId('bookmark-detachment-button')).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Detachments' })).toHaveAttribute(
+      'href',
+      '/faction/space-marines/detachments'
+    );
 
     await page.goto('/faction/space-marines/detachment/shield-of-the-void');
     await expect(

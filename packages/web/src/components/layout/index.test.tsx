@@ -240,4 +240,63 @@ describe('AppLayout', () => {
     expect(armies).not.toHaveClass('border-border-accent');
     expect(armies).not.toHaveClass('text-accent');
   });
+
+  it('exposes the complete primary navigation and follows nested Army routes', () => {
+    media.desktop = true;
+
+    render(
+      <TestWrapper initialEntries={['/rosters/example/edit']}>
+        <AppLayout title="Roster">
+          <p>roster</p>
+        </AppLayout>
+      </TestWrapper>
+    );
+
+    const primary = screen.getAllByRole('navigation', { name: 'Primary' })[0];
+    expect(within(primary).getByRole('link', { name: 'Home' })).toHaveAttribute('href', '/');
+    expect(within(primary).getByRole('link', { name: 'Rules' })).toHaveAttribute(
+      'href',
+      '/factions'
+    );
+    expect(within(primary).getByRole('link', { name: 'Armies' })).toHaveAttribute(
+      'href',
+      '/armies'
+    );
+    expect(within(primary).getByRole('link', { name: 'Settings' })).toHaveAttribute(
+      'href',
+      '/settings'
+    );
+    expect(within(primary).getByRole('link', { name: 'Armies' })).toHaveClass('text-accent');
+    expect(within(primary).getByRole('link', { name: 'Rules' })).not.toHaveClass('text-accent');
+  });
+
+  it('renders the mobile primary navigation on root pages', () => {
+    render(
+      <TestWrapper initialEntries={['/settings']}>
+        <AppLayout title="Settings">
+          <p>settings</p>
+        </AppLayout>
+      </TestWrapper>
+    );
+
+    const primary = screen.getAllByRole('navigation', { name: 'Primary' });
+    expect(primary).toHaveLength(2);
+    expect(within(primary[1]).getByRole('link', { name: 'Settings' })).toHaveClass('text-accent');
+  });
+
+  it('replaces mobile navigation with the route-defined drill-in back link', () => {
+    render(
+      <TestWrapper initialEntries={['/faction/space-marines/datasheet/intercessor']}>
+        <AppLayout title="Datasheet" back={{ to: '/faction/space-marines', label: 'Space Marines' }}>
+          <p>datasheet</p>
+        </AppLayout>
+      </TestWrapper>
+    );
+
+    expect(screen.getAllByRole('navigation', { name: 'Primary' })).toHaveLength(1);
+    expect(screen.getByTestId('mobile-back-button')).toHaveAttribute(
+      'href',
+      '/faction/space-marines'
+    );
+  });
 });
