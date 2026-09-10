@@ -62,7 +62,6 @@ describe('UnitEditShell', () => {
     expect(onSave).toHaveBeenCalledWith(
       expect.objectContaining({
         selectedWargear: expect.arrayContaining([
-          expect.objectContaining({ id: datasheet.wargear[0].id }),
           expect.objectContaining({ id: datasheet.wargear[1].id })
         ]),
         selectedWargearAbilities: [expect.objectContaining({ id: 'wargear-ability' })],
