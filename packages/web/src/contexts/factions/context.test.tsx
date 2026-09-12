@@ -22,6 +22,13 @@ vi.mock('../../data/offline-storage', () => ({
   offlineStorage: mockOfflineStorage
 }));
 
+// FactionsProvider waits for profile readiness in the application tree. These
+// tests exercise faction caching in isolation, so provide that boundary
+// explicitly rather than coupling every fixture to profile migration.
+vi.mock('../profile/context', () => ({
+  useProfileContext: () => ({ loading: false })
+}));
+
 global.fetch = vi.fn();
 
 const TestComponent = () => {
