@@ -645,13 +645,13 @@ describe('OfflineStorage', () => {
     });
 
     it('uses a safe status fallback when an API error body is not JSON', async () => {
-      const fetchSpy = vi.spyOn(global, 'fetch').mockResolvedValue({
-        ok: false,
-        status: 502,
-        json: async () => {
-          throw new SyntaxError('Unexpected token');
-        }
-      } as unknown as Response);
+      const fetchSpy = vi.spyOn(global, 'fetch').mockResolvedValue(
+        Object.assign(new Response(null, { status: 502 }), {
+          json: async () => {
+            throw new SyntaxError('Unexpected token');
+          }
+        })
+      );
 
       await expect(offlineStorage.saveRosterToServer(mockRoster)).rejects.toMatchObject({
         message: 'Depot API 502',
