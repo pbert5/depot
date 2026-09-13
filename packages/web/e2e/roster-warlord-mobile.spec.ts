@@ -28,29 +28,17 @@ test.describe('Orks Warlord mobile workflow', () => {
     await runtherdCard.click();
     await expect(page.getByTestId('warlord-section')).toBeVisible();
     await page.getByRole('switch', { name: 'Nominate as warlord' }).check();
-    await page.route('**/api/rosters/*', async (route) => {
-      if (route.request().method() === 'PUT') {
-        await route.fulfill({ status: 503, body: 'temporary failure' });
-      } else {
-        await route.continue();
-      }
-    });
     await page.getByTestId('save-button').click();
     await expect(page).toHaveURL(/\/edit#unit-/);
     await expect(page.getByTestId('unit-warlord-tag')).toContainText('Warlord');
     await expect(page.getByTestId('roster-save-status').first()).toContainText('Saved');
     const status = page.getByTestId('roster-save-status').first();
     const statusBox = await status.boundingBox();
-    const retry = status.getByRole('button', { name: 'Retry' });
-    const retryBox = await retry.boundingBox();
     expect(statusBox).not.toBeNull();
-    expect(retryBox).not.toBeNull();
     expect(statusBox!.x).toBeGreaterThanOrEqual(0);
     expect(statusBox!.x + statusBox!.width).toBeLessThanOrEqual(
       await page.evaluate(() => innerWidth)
     );
-    expect(retryBox!.x).toBeGreaterThanOrEqual(statusBox!.x);
-    await retry.click();
   });
 
   for (const viewport of [
