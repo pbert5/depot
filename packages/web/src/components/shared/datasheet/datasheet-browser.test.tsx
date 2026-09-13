@@ -175,10 +175,7 @@ describe('DatasheetBrowser', () => {
           catalogueMode
           effectiveKeywordAbilities={[{
             id: 'detachment-rule',
-            legend: '',
             description: 'Your INFANTRY units gain the CHARACTER keyword.',
-            factionId: 'SM',
-            type: 'Detachment',
             keywordGrants: [{ targetKeyword: 'INFANTRY', grantedKeyword: 'CHARACTER' }]
           }]}
           renderDatasheet={(sheet) => <span>{sheet.name}</span>}
