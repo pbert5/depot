@@ -131,6 +131,25 @@ describe('getBattleSize', () => {
 });
 
 describe('effective roster keywords', () => {
+  it('applies a named-datasheet grant to production-shaped Gretchin', () => {
+    const gretchin = datasheet({
+      id: 'gretchin',
+      name: 'Gretchin',
+      keywords: kw('Orks', 'Grots', 'Infantry')
+    });
+    const ability = {
+      id: 'runt-swarm',
+      description: 'Friendly GRETCHIN units gain the BATTLELINE keyword.'
+    };
+
+    expect(getEffectiveKeywords(gretchin, [ability]).map((entry) => entry.keyword)).toEqual([
+      'Orks',
+      'Grots',
+      'Infantry',
+      'BATTLELINE'
+    ]);
+  });
+
   it('applies a contextual detachment grant without mutating the datasheet', () => {
     const gretchin = datasheet({ id: 'gretchin', keywords: kw('Gretchin', 'Infantry') });
     const ability = {
@@ -299,6 +318,55 @@ describe('getEnhancementEligibility', () => {
 });
 
 describe('validateRoster', () => {
+  const gretchin = datasheet({
+    id: 'gretchin',
+    name: 'Gretchin',
+    keywords: kw('Orks', 'Grots', 'Infantry')
+  });
+  const runtSwarm = detachment({
+    id: 'runt-swarm',
+    abilities: [
+      {
+        id: 'runt-swarm',
+        factionId: 'ORKS',
+        name: 'Runt-swarm',
+        legend: '',
+        description: 'Friendly GRETCHIN units gain the BATTLELINE keyword.',
+        detachment: 'runt-swarm'
+      }
+    ]
+  });
+
+  it('allows four production-shaped Gretchin units at Incursion', () => {
+    const units = Array.from({ length: 4 }, () => unit(gretchin));
+    expect(
+      validateRoster(
+        roster({
+          points: { current: 500, max: 1000 },
+          detachments: [runtSwarm],
+          units,
+          warlordUnitId: units[0].id
+        })
+      ).filter((issue) => issue.code === 'unit-limit')
+    ).toEqual([]);
+  });
+
+  it('rejects five production-shaped Gretchin units at Incursion', () => {
+    const units = Array.from({ length: 5 }, () => unit(gretchin));
+    const issues = validateRoster(
+      roster({
+        points: { current: 500, max: 1000 },
+        detachments: [runtSwarm],
+        units,
+        warlordUnitId: units[0].id
+      })
+    );
+
+    expect(
+      issues.filter((issue) => issue.code === 'unit-limit').map((issue) => issue.message)
+    ).toEqual(['Gretchin: 5 units selected; Incursion allows 4.']);
+  });
+
   it('accepts a legal list', () => {
     const leader = unit(captain);
     expect(
