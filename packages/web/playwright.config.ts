@@ -27,19 +27,21 @@ export default defineConfig({
     },
     {
       name: 'chromium-mobile-390',
-      testMatch: /.*(roster-add-units|collections)\.spec\.ts/,
+      testMatch: /.*(roster-add-units|roster-warlord-mobile|collections)\.spec\.ts/,
       use: { ...devices['Pixel 5'], viewport: { width: 390, height: 844 } }
     },
     {
       name: 'chromium-narrow-360',
-      testMatch: /.*roster-add-units\.spec\.ts/,
+      testMatch: /.*(roster-add-units|roster-warlord-mobile)\.spec\.ts/,
       use: { ...devices['Pixel 5'], viewport: { width: 360, height: 844 } }
     }
   ],
-  webServer: external ? undefined : {
-    command: `pnpm --filter @depot/web dev -- --host --port ${PORT}`,
-    url: baseURL,
-    reuseExistingServer: !process.env.CI,
-    timeout: 120_000
-  }
+  webServer: external
+    ? undefined
+    : {
+        command: `pnpm --filter @depot/web dev -- --host --port ${PORT}`,
+        url: baseURL,
+        reuseExistingServer: !process.env.CI,
+        timeout: 120_000
+      }
 });
