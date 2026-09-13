@@ -41,9 +41,9 @@ RUN chmod +x /opt/warhammer/bin/* \
 # host socket's numeric group varies across Linux, Docker Desktop, and WSL;
 # invoke that CLI through this narrowly-scoped sudo rule instead of baking a
 # host group ID into the image. Docker-socket access is already root-equivalent.
-RUN printf 'node ALL=(root) NOPASSWD: /usr/bin/docker\n' > /etc/sudoers.d/node-docker \
+RUN printf 'node ALL=(root) NOPASSWD: /usr/bin/docker, /usr/local/bin/docker\n' > /etc/sudoers.d/node-docker \
     && chmod 0440 /etc/sudoers.d/node-docker \
-    && printf '%s\n' '#!/bin/sh' 'exec sudo /usr/bin/docker "$@"' > /opt/warhammer/bin/docker \
+    && printf '%s\n' '#!/bin/sh' 'exec sudo /usr/local/bin/docker "$@"' > /opt/warhammer/bin/docker \
     && chmod 0755 /opt/warhammer/bin/docker
 
 USER node
