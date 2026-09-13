@@ -7,3 +7,4 @@ runtime/backups/
 *.log
 .worktrees/
 runtime/munda-supabase/
+.dev-runtime-mode

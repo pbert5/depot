@@ -70,7 +70,7 @@ services:
     restart: unless-stopped
     ports:
       - target: 80
-        published: "${DEPOT_PORT:-18086}"
+        published: "${DEPOT_PORT:-19096}"
         host_ip: "127.0.0.1"
         protocol: tcp
     init: true

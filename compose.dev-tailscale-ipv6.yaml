@@ -1,0 +1,17 @@
+# Optional development-only overlay with the configured Tailscale IPv4 and
+# IPv6 addresses. It uses ordinary Docker publishing, never Tailscale Serve.
+services:
+  depot-web:
+    ports: !override
+      - target: 80
+        published: "${DEPOT_PORT:-19096}"
+        host_ip: "127.0.0.1"
+        protocol: tcp
+      - target: 80
+        published: "${DEPOT_PORT:-19096}"
+        host_ip: "${DEPOT_TAILSCALE_IPV4_ADDR:?Set DEPOT_TAILSCALE_IPV4_ADDR in .env.local or the environment}"
+        protocol: tcp
+      - target: 80
+        published: "${DEPOT_PORT:-19096}"
+        host_ip: "${DEPOT_TAILSCALE_ADDR:?Set DEPOT_TAILSCALE_ADDR in .env.local or the environment}"
+        protocol: tcp

@@ -39,7 +39,7 @@ From the repository root, the usual workflow is:
 ```
 
 The local development Depot UI is always
-`http://127.0.0.1:18086`. Its Compose project and database volume are separate
+`http://127.0.0.1:19096`. Its Compose project and database volume are separate
 from production. `docker compose up -d` from the repository root is the
 supported full-Compose local-development invocation and does not require
 Tailscale. The terminal-first `./run.sh` workflow is the portable Depot-only
@@ -48,6 +48,19 @@ without requiring the optional Munda/Supabase stack. The
 production stack remains an explicit deployment workflow with its existing
 configured ports (normally Depot `19096`) and restricted Tailscale bindings;
 do not use the development volume for production data.
+
+To expose only the development Depot directly on this host's Tailscale address,
+set `DEPOT_TAILSCALE_IPV4_ADDR` in `.env.local` (and optionally
+`DEPOT_TAILSCALE_ADDR` for IPv6), then run:
+
+```sh
+./run.sh --tailscale
+```
+
+This publishes Depot on `127.0.0.1:19096` and the exact configured Tailscale
+address. It uses ordinary Docker port publishing, never Tailscale Serve. The
+database and API remain internal, and plain `./run.sh` does not require
+Tailscale.
 
 VS Code may attach to the same Dev Container, but is optional and does not own
 the environment. Terminal users and CI use the same repository-owned

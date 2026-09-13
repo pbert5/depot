@@ -32,8 +32,9 @@ def test_runtime_refreshes_only_the_safe_development_topology():
     assert "compose build --pull=false depot-api depot-web" in text
     assert "--force-recreate" in text
     assert "--wait-timeout 180" in text
-    assert "http://127.0.0.1:18086" in text
-    assert "DEPOT_TAILSCALE" not in text
+    assert "http://127.0.0.1:${DEPOT_PORT:-19096}" in text
+    assert "--tailscale" in text
+    assert "DEPOT_TAILSCALE_IPV4_ADDR" in text
     assert "compose down --volumes --remove-orphans" in text
     assert 'project" != "warhammer-dev"' in text
     assert "production" not in text.lower() or "production operators" in text.lower()

@@ -18,8 +18,32 @@ depot_revision=$(git -C vendor/depot rev-parse HEAD)
 export WARHAMMER_PARENT_REVISION="$parent_revision"
 export DEPOT_SOURCE_REVISION="$depot_revision"
 
+# .env.local is optional for ordinary development, but supplies the explicit
+# host address when --tailscale is requested.
+if [ -f .env.local ]; then
+    set -a
+    . ./.env.local
+    set +a
+fi
+
+mode_file=".dev-runtime-mode"
+dev_mode=local
+if [ -f "$mode_file" ]; then
+    dev_mode=$(sed -n '1p' "$mode_file")
+fi
+
 compose() {
-    docker compose --project-name warhammer-dev "$@"
+    compose_env_file=""
+    [ -f .env.local ] && compose_env_file="--env-file .env.local"
+    if [ "$dev_mode" = tailscale-ipv6 ]; then
+        docker compose $compose_env_file --project-name warhammer-dev \
+            -f compose.yaml -f compose.dev-tailscale-ipv6.yaml "$@"
+    elif [ "$dev_mode" = tailscale ]; then
+        docker compose $compose_env_file --project-name warhammer-dev \
+            -f compose.yaml -f compose.dev-tailscale.yaml "$@"
+    else
+        docker compose $compose_env_file --project-name warhammer-dev -f compose.yaml "$@"
+    fi
 }
 
 require_dev_project() {
@@ -54,26 +78,63 @@ show_status() {
         printf '  %s: health=%s image=%s depot-revision=%s\n' "$service" "$health" "$image" "$revision"
     done
     echo
-    echo "Depot: http://127.0.0.1:18086"
+    echo "Development mode: $dev_mode"
+    echo "Depot: http://127.0.0.1:${DEPOT_PORT:-19096}"
+    if [ "$dev_mode" = tailscale ] || [ "$dev_mode" = tailscale-ipv6 ]; then
+        echo "Depot (Tailscale IPv4): http://${DEPOT_TAILSCALE_IPV4_ADDR}:${DEPOT_PORT:-19096}"
+        if [ "$dev_mode" = tailscale-ipv6 ]; then
+            echo "Depot (Tailscale IPv6): http://[${DEPOT_TAILSCALE_ADDR}]:${DEPOT_PORT:-19096}"
+        fi
+    fi
     echo "Development database: Compose-managed warhammer-dev volume (not host-published)"
 }
 
 case "${1:-run}" in
     run)
         shift || true
-        [ "$#" -eq 0 ] || { echo "run does not accept arguments." >&2; exit 64; }
+        case "${1:-}" in
+            "") dev_mode=local ;;
+            --tailscale)
+                [ "$#" -eq 1 ] || { echo "run accepts only --tailscale." >&2; exit 64; }
+                [ -n "${DEPOT_TAILSCALE_IPV4_ADDR:-}" ] || {
+                    echo "--tailscale requires DEPOT_TAILSCALE_IPV4_ADDR in .env.local or the environment." >&2
+                    exit 64
+                }
+                if [ -n "${DEPOT_TAILSCALE_ADDR:-}" ]; then
+                    dev_mode=tailscale-ipv6
+                else
+                    dev_mode=tailscale
+                fi
+                ;;
+            *) echo "run accepts only --tailscale." >&2; exit 64 ;;
+        esac
+        printf '%s\n' "$dev_mode" > "$mode_file"
+        if ! compose config --quiet; then
+            echo "Could not render the development Compose configuration for Depot port ${DEPOT_PORT:-19096}." >&2
+            exit 1
+        fi
         # Docker's normal build cache remains enabled.  Rebuilding before the
         # forced recreate makes the running service reflect this checkout.
         compose build --pull=false depot-api depot-web
         # The canonical local workflow is Depot.  Do not accidentally require
         # the optional Munda/Supabase operator stack just to bring up Depot.
-        compose up -d --no-build --force-recreate --remove-orphans --wait --wait-timeout 180 \
-            depot-db depot-api depot-web
-        echo "Depot: http://127.0.0.1:18086"
+        if ! compose up -d --no-build --force-recreate --remove-orphans --wait --wait-timeout 180 \
+            depot-db depot-api depot-web; then
+            echo "Development Depot port ${DEPOT_PORT:-19096} could not be bound; if it is occupied, stop the conflicting service and retry." >&2
+            exit 1
+        fi
+        echo "Depot: http://127.0.0.1:${DEPOT_PORT:-19096}"
+        if [ "$dev_mode" = tailscale ] || [ "$dev_mode" = tailscale-ipv6 ]; then
+            echo "Depot (Tailscale IPv4): http://${DEPOT_TAILSCALE_IPV4_ADDR}:${DEPOT_PORT:-19096}"
+            if [ "$dev_mode" = tailscale-ipv6 ]; then
+                echo "Depot (Tailscale IPv6): http://[${DEPOT_TAILSCALE_ADDR}]:${DEPOT_PORT:-19096}"
+            fi
+        fi
         compose ps
         ;;
     stop)
         compose down --remove-orphans
+        rm -f "$mode_file"
         echo "Development runtime stopped; the Dev Container and development database are preserved."
         ;;
     status)
@@ -86,6 +147,7 @@ case "${1:-run}" in
         }
         require_dev_project
         compose down --volumes --remove-orphans
+        rm -f "$mode_file"
         echo "Development Compose containers and volumes were removed. Persistent Codex and pnpm volumes were not touched."
         ;;
     *)

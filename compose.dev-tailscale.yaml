@@ -1,0 +1,13 @@
+# Optional development-only overlay. It publishes Depot directly on the
+# configured Tailscale IPv4 address; it does not use Tailscale Serve.
+services:
+  depot-web:
+    ports: !override
+      - target: 80
+        published: "${DEPOT_PORT:-19096}"
+        host_ip: "127.0.0.1"
+        protocol: tcp
+      - target: 80
+        published: "${DEPOT_PORT:-19096}"
+        host_ip: "${DEPOT_TAILSCALE_IPV4_ADDR:?Set DEPOT_TAILSCALE_IPV4_ADDR in .env.local or the environment}"
+        protocol: tcp

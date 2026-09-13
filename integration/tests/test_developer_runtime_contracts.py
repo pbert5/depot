@@ -70,7 +70,7 @@ def test_dev_compose_is_safe_default_and_production_is_explicit():
     assert "DEPOT_TAILSCALE" not in dev
     assert "DEPOT_POSTGRES_PASSWORD:?" not in dev
     assert "warhammer-dev" in dev
-    assert "18086" in dev
+    assert "19096" in dev
     assert 'host_ip: "127.0.0.1"' in dev
     assert "depot-db-data" in dev
     assert "ports:" not in dev.split("  depot-api:", 1)[1].split("\n  ", 1)[0]
@@ -148,7 +148,7 @@ def test_run_runtime_contract_preserves_data_and_refreshes_images():
     assert "--force-recreate" in runtime
     assert "--no-cache" not in runtime
     assert "--wait" in runtime
-    assert "18086" in run or "18086" in runtime
+    assert "19096" in run or "19096" in runtime
     assert "dev-runtime.sh" in stop and "down" in runtime
     assert "--volumes" not in stop
 
