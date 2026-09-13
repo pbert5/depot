@@ -15,7 +15,7 @@ test.describe('Orks Warlord mobile workflow', () => {
       .waitFor({ state: 'detached' })
       .catch(() => {});
     await page.getByTestId('datasheet-search').fill('Runtherd');
-    await page.getByTestId('characters').click();
+    await page.getByTestId('datasheet-category-characters').click();
     await expect(page.getByTestId('add-datasheet-runtherd')).toBeVisible();
     await page.getByTestId('add-datasheet-runtherd').click();
     await page.getByRole('button', { name: /Review Selection/i }).click();
