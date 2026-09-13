@@ -1,9 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import type { Ability, CollectionUnit, Datasheet, ModelCost, Wargear } from '../types/depot.js';
+import type { Ability, CollectionUnit, Datasheet, ModelCost, RosterUnit, Wargear } from '../types/depot.js';
 import {
   applyCollectionRebind,
   matchDatasheetIdentity,
   rebindCollectionUnit,
+  rebindRosterUnit,
   rebindModelCost,
   rebindSelectedWargear,
   rebindUnitSelections
@@ -232,6 +233,16 @@ describe('rebindCollectionUnit', () => {
     expect(result.item.datasheetSlug).toBe('intercessor-squad-v2');
     expect(result.item.selectedWargear[0]?.id).toBe('ds-2:bolt-rifle');
     expect(result.item.state).toBe('sprue');
+  });
+});
+
+describe('rebindRosterUnit', () => {
+  it('preserves an attachment target while hydrating a saved unit', () => {
+    const unit: RosterUnit = {
+      id: 'leader', datasheet: datasheet(), modelCost: cost(), selectedWargear: [], attachedToUnitId: 'bodyguard'
+    };
+    const result = rebindRosterUnit(unit, datasheet());
+    expect(result.unit.attachedToUnitId).toBe('bodyguard');
   });
 });
 
