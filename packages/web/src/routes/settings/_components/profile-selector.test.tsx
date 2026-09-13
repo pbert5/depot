@@ -34,7 +34,21 @@ describe('ProfileSelector', () => {
   });
 
   it('selects, creates, and renames through the adapter', async () => {
-    const profiles = adapter();
+    const renamed = { ...two, displayName: 'Renamed' };
+    const profiles = adapter({
+      list: vi
+        .fn()
+        .mockResolvedValueOnce({ profiles: [one, two], active: one, activeProfileId: one.id })
+        .mockResolvedValueOnce({ profiles: [one, two], active: two, activeProfileId: two.id })
+        .mockResolvedValueOnce({ profiles: [one, two], active: two, activeProfileId: two.id })
+        .mockResolvedValue({
+          profiles: [one, renamed],
+          active: renamed,
+          activeProfileId: renamed.id
+        }),
+      create: vi.fn().mockResolvedValue(two),
+      rename: vi.fn().mockResolvedValue(renamed)
+    });
     render(<ProfileSelector adapter={profiles} />);
     await screen.findByTestId('current-profile');
 
@@ -46,11 +60,13 @@ describe('ProfileSelector', () => {
     });
     fireEvent.click(screen.getByRole('button', { name: /create/i }));
     await waitFor(() => expect(profiles.create).toHaveBeenCalledWith('New campaign'));
+    expect(await screen.findByTestId('current-profile')).toHaveTextContent('League night');
 
     fireEvent.click(screen.getByRole('button', { name: /rename current profile/i }));
     fireEvent.change(screen.getByLabelText('New profile name'), { target: { value: 'Renamed' } });
     fireEvent.click(screen.getByRole('button', { name: 'Save' }));
-    await waitFor(() => expect(profiles.rename).toHaveBeenCalledWith('one', 'Renamed'));
+    await waitFor(() => expect(profiles.rename).toHaveBeenCalledWith('two', 'Renamed'));
+    expect(await screen.findByTestId('current-profile')).toHaveTextContent('Renamed');
   });
 
   it('renders loading and recoverable error states', async () => {
