@@ -2,7 +2,7 @@ name: warhammer-dev
 
 # The default Compose file is deliberately a safe, disposable local
 # development topology. Production deployment scripts add
-# compose.production.yaml explicitly.
+# compose.prod.yaml explicitly.
 services:
   depot-db:
     image: postgres:17-alpine
@@ -11,7 +11,7 @@ services:
       POSTGRES_DB: "${DEPOT_POSTGRES_DB:-depot}"
       POSTGRES_USER: "${DEPOT_POSTGRES_USER:-depot}"
       # This value is only for the isolated development project. Production
-      # scripts require DEPOT_POSTGRES_PASSWORD in compose.production.yaml.
+      # scripts require DEPOT_POSTGRES_PASSWORD in compose.prod.yaml.
       POSTGRES_PASSWORD: "${DEPOT_POSTGRES_PASSWORD:-warhammer-dev-only}"
     volumes:
       - depot-db-data:/var/lib/postgresql/data

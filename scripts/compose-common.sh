@@ -34,9 +34,9 @@ compose() {
     project_name=${COMPOSE_PROJECT_NAME:-warhammer}
     if [ -f runtime/munda-supabase/env ]; then
         docker compose --project-name "$project_name" --env-file .env.local --env-file runtime/munda-supabase/env \
-            -f compose.yaml -f compose.production.yaml "$@"
+            -f compose.yaml -f compose.prod.yaml "$@"
     else
         docker compose --project-name "$project_name" --env-file .env.local \
-            -f compose.yaml -f compose.production.yaml "$@"
+            -f compose.yaml -f compose.prod.yaml "$@"
     fi
 }
