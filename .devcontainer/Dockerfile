@@ -6,7 +6,7 @@ USER root
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
        ca-certificates curl fd-find fzf git gh gnupg jq openssh-client ripgrep tmux zsh \
-       zsh-autosuggestions zsh-syntax-highlighting yq bat btop less procps \
+       zsh-autosuggestions zsh-syntax-highlighting yq bat btop less procps sudo \
     && rm -rf /var/lib/apt/lists/* \
     && ln -sf /usr/bin/fdfind /usr/local/bin/fd \
     && ln -sf /usr/bin/batcat /usr/local/bin/bat \
@@ -36,6 +36,15 @@ RUN install -o node -g node -m 0644 /tmp/.zshrc /home/node/.zshrc \
 COPY .devcontainer/scripts/ /opt/warhammer/bin/
 RUN chmod +x /opt/warhammer/bin/* \
     && for script in /opt/warhammer/bin/*; do ln -sf "$script" "/usr/local/bin/$(basename "$script")"; done
+
+# The Docker feature supplies the CLI after this Dockerfile is built.  The
+# host socket's numeric group varies across Linux, Docker Desktop, and WSL;
+# invoke that CLI through this narrowly-scoped sudo rule instead of baking a
+# host group ID into the image. Docker-socket access is already root-equivalent.
+RUN printf 'node ALL=(root) NOPASSWD: /usr/bin/docker\n' > /etc/sudoers.d/node-docker \
+    && chmod 0440 /etc/sudoers.d/node-docker \
+    && printf '%s\n' '#!/bin/sh' 'exec sudo /usr/bin/docker "$@"' > /opt/warhammer/bin/docker \
+    && chmod 0755 /opt/warhammer/bin/docker
 
 USER node
 ENV PATH="/home/node/.local/bin:/opt/warhammer/bin:${PATH}" \

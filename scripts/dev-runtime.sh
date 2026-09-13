@@ -60,7 +60,10 @@ case "${1:-run}" in
         # Docker's normal build cache remains enabled.  Rebuilding before the
         # forced recreate makes the running service reflect this checkout.
         compose build --pull=false depot-api depot-web
-        compose up -d --no-build --force-recreate --remove-orphans --wait --wait-timeout 180
+        # The canonical local workflow is Depot.  Do not accidentally require
+        # the optional Munda/Supabase operator stack just to bring up Depot.
+        compose up -d --no-build --force-recreate --remove-orphans --wait --wait-timeout 180 \
+            depot-db depot-api depot-web
         echo "Depot: http://127.0.0.1:18086"
         compose ps
         ;;

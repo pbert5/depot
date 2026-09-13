@@ -35,7 +35,7 @@ From the repository root, the usual workflow is:
 ./dev.sh pnpm test       # run a command in the container
 ./run-codex.sh           # run Codex with persistent ~/.codex
 ./stop.sh                # stop the development runtime, retaining its DB
-./status.sh              # inspect the development environment
+./dev-status.sh          # inspect the development environment
 ```
 
 The local development Depot UI is always
