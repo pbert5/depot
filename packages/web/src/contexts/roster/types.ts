@@ -30,6 +30,8 @@ export type RosterAction =
       payload: { datasheet: depot.Datasheet; modelCost: depot.ModelCost; id?: string };
     }
   | { type: 'DUPLICATE_UNIT'; payload: { unit: depot.RosterUnit } }
+  | { type: 'ATTACH_UNIT'; payload: { leaderUnitId: string; bodyguardUnitId: string } }
+  | { type: 'DETACH_UNIT'; payload: { leaderUnitId: string } }
   | { type: 'REMOVE_UNIT'; payload: { rosterUnitId: string } }
   | { type: 'UPDATE_UNIT_WARGEAR'; payload: { rosterUnitId: string; wargear: depot.Wargear[] } }
   | {

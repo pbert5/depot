@@ -22,13 +22,39 @@ export const calculateTotalPoints = (roster: Roster): number =>
   roster.units.reduce((total, unit) => total + points(unit.modelCost.cost), 0) +
   roster.enhancements.reduce((total, { enhancement }) => total + points(enhancement.cost), 0);
 
+export type UnitAttachmentEligibility = {
+  eligible: boolean;
+  code: 'ok' | 'leader-missing' | 'bodyguard-missing' | 'self' | 'not-allowed';
+};
+
+/** Checks whether a roster leader may explicitly attach to a bodyguard unit. */
+export const getUnitAttachmentEligibility = (
+  roster: Pick<Roster, 'units'>,
+  leaderUnitId: string,
+  bodyguardUnitId: string
+): UnitAttachmentEligibility => {
+  const leader = roster.units.find((unit) => unit.id === leaderUnitId);
+  if (!leader) return { eligible: false, code: 'leader-missing' };
+  if (leaderUnitId === bodyguardUnitId) return { eligible: false, code: 'self' };
+  const bodyguard = roster.units.find((unit) => unit.id === bodyguardUnitId);
+  if (!bodyguard) return { eligible: false, code: 'bodyguard-missing' };
+  const eligible = leader.datasheet.leaders.some((entry) => entry.id === bodyguard.datasheet.id);
+  return { eligible, code: eligible ? 'ok' : 'not-allowed' };
+};
+
 /** Fresh roster + unit ids, with enhancement/warlord references remapped to the new unit ids. */
 export const remapRosterIds = (roster: Roster): Roster => {
   const unitIds = new Map(roster.units.map((unit) => [unit.id, createId()]));
   return {
     ...roster,
     id: createId(),
-    units: roster.units.map((unit) => ({ ...unit, id: unitIds.get(unit.id)! })),
+    units: roster.units.map((unit) => ({
+      ...unit,
+      id: unitIds.get(unit.id)!,
+      attachedToUnitId: unit.attachedToUnitId
+        ? (unitIds.get(unit.attachedToUnitId) ?? null)
+        : unit.attachedToUnitId ?? null
+    })),
     // Drop enhancements whose unit is missing — imports are untrusted files.
     enhancements: roster.enhancements.flatMap((entry) => {
       const unitId = unitIds.get(entry.unitId);

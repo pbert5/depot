@@ -21,6 +21,9 @@ import type {
  */
 const toStoredUnit = <T extends RosterUnit | CollectionUnit>(unit: T): StoredUnit => ({
   id: unit.id,
+  ...('attachedToUnitId' in unit && unit.attachedToUnitId !== undefined
+    ? { attachedToUnitId: unit.attachedToUnitId }
+    : {}),
   datasheet: {
     id: unit.datasheet.id,
     slug: unit.datasheet.slug,
