@@ -23,7 +23,9 @@ def run_script(script, *args, path=None, **extra_env):
     # Deliberately omit /usr/local/bin, where a real devcontainer binary is
     # commonly installed, so missing-tool coverage is deterministic.
     if path is not None:
-        env["PATH"] = str(path)
+        # Keep POSIX shell utilities available while still omitting the usual
+        # host install location for the missing-CLI contract.
+        env["PATH"] = f"{path}:/usr/bin:/bin"
     return subprocess.run(
         [str(ROOT / script), *args],
         cwd=ROOT,
@@ -147,7 +149,7 @@ def test_run_runtime_contract_preserves_data_and_refreshes_images():
     assert "--no-cache" not in runtime
     assert "--wait" in runtime
     assert "18086" in run or "18086" in runtime
-    assert "down" in stop
+    assert "dev-runtime.sh" in stop and "down" in runtime
     assert "--volumes" not in stop
 
     # Reset must require an explicit non-interactive acknowledgement and must
@@ -157,4 +159,3 @@ def test_run_runtime_contract_preserves_data_and_refreshes_images():
     assert "depot-db-data" in reset
     assert "production" in reset.lower() or "reject" in reset.lower()
     assert "warhammer-codex" not in reset
-

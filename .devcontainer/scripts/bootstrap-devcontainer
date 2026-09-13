@@ -7,9 +7,23 @@ node --version
 # Lifecycle hooks are noninteractive. If the pinned pnpm release is not already
 # cached, fail clearly instead of waiting for Corepack's download prompt.
 export COREPACK_ENABLE_DOWNLOAD_PROMPT=0
+export COREPACK_DEFAULT_TO_LATEST=0
 corepack enable
+corepack install --global pnpm@10.20.0
 pnpm --dir vendor/depot --version
 git --version
+docker_wrapper=/opt/warhammer/bin/docker
+cat > "$docker_wrapper" <<'EOF'
+#!/bin/sh
+for docker_cli in /usr/local/bin/docker /usr/bin/docker; do
+    if [ -x "$docker_cli" ]; then
+        exec sudo "$docker_cli" "$@"
+    fi
+done
+echo "Docker CLI not found in /usr/local/bin or /usr/bin." >&2
+exit 127
+EOF
+chmod 0755 "$docker_wrapper"
 docker info >/dev/null
 docker compose version
 rtk --version

@@ -24,6 +24,7 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends lazygit \
     && rm -rf /var/lib/apt/lists/* \
     && install -d -m 0755 /opt/warhammer/bin /workspaces \
+    && install -d -o node -g node -m 0755 /home/node/.local/share/pnpm/store \
     && curl -fsSL https://chatgpt.com/codex/install.sh \
        | CODEX_HOME=/opt/codex CODEX_INSTALL_DIR=/usr/local/bin CODEX_NON_INTERACTIVE=1 sh \
     && chown -R node:node /opt/warhammer /workspaces
@@ -35,24 +36,18 @@ RUN install -o node -g node -m 0644 /tmp/.zshrc /home/node/.zshrc \
 
 COPY .devcontainer/scripts/ /opt/warhammer/bin/
 RUN chmod +x /opt/warhammer/bin/* \
-    && for script in /opt/warhammer/bin/*; do ln -sf "$script" "/usr/local/bin/$(basename "$script")"; done
+    && for script in /opt/warhammer/bin/*; do \
+         name=$(basename "$script"); \
+         if [ "$name" != docker ]; then ln -sf "$script" "/usr/local/bin/$name"; fi; \
+       done
 
-# The Docker feature supplies the CLI after this Dockerfile is built.  The
-# host socket's numeric group varies across Linux, Docker Desktop, and WSL;
-# invoke that CLI through this narrowly-scoped sudo rule instead of baking a
-# host group ID into the image. Docker-socket access is already root-equivalent.
+# The Docker feature supplies the CLI after this Dockerfile is built. The host
+# socket's numeric group varies across Linux, Docker Desktop, and WSL; the
+# bootstrap places a wrapper in the user's runtime PATH that invokes that CLI
+# through this narrowly-scoped sudo rule instead of baking a host group ID
+# into the image. Docker-socket access is already root-equivalent.
 RUN printf 'node ALL=(root) NOPASSWD: /usr/bin/docker, /usr/local/bin/docker\n' > /etc/sudoers.d/node-docker \
-    && chmod 0440 /etc/sudoers.d/node-docker \
-    && printf '%s\n' \
-       '#!/bin/sh' \
-       'for docker_cli in /usr/local/bin/docker /usr/bin/docker; do' \
-       '    if [ -x "$docker_cli" ] && [ "$docker_cli" != "$0" ]; then' \
-       '        exec sudo "$docker_cli" "$@"' \
-       '    fi' \
-       'done' \
-       'echo "Docker CLI not found in /usr/local/bin or /usr/bin." >&2' \
-       'exit 127' > /opt/warhammer/bin/docker \
-    && chmod 0755 /opt/warhammer/bin/docker
+    && chmod 0440 /etc/sudoers.d/node-docker
 
 USER node
 ENV PATH="/home/node/.local/bin:/opt/warhammer/bin:${PATH}" \

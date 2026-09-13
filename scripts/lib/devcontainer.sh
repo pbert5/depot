@@ -6,7 +6,7 @@
 
 devcontainer_require() {
     if ! command -v devcontainer >/dev/null 2>&1; then
-        echo "Dev Container CLI is required. Install it, then retry (Docker must also be running)." >&2
+        echo "devcontainer CLI is required. Install it, then retry (Docker must also be running)." >&2
         return 127
     fi
 }

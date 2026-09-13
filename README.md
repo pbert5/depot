@@ -32,7 +32,7 @@ From the repository root, the usual workflow is:
 ```sh
 ./run.sh                 # build current source and start the Depot-only runtime
 ./dev.sh zsh             # open the canonical development shell
-./dev.sh pnpm test       # run a command in the container
+./dev.sh pnpm --dir vendor/depot test # run a command in the container
 ./run-codex.sh           # run Codex with persistent ~/.codex
 ./stop.sh                # stop the development runtime, retaining its DB
 ./dev-status.sh          # inspect the development environment

@@ -1,5 +1,13 @@
 name: warhammer-dev
 
+networks:
+  default:
+    # Keep this project independent of Docker's exhausted predefined pools;
+    # Compose still namespaces the actual network by project name.
+    ipam:
+      config:
+        - subnet: "10.250.0.0/16"
+
 # The default Compose file is deliberately a safe, disposable local
 # development topology. Production deployment scripts add
 # compose.prod.yaml explicitly.
