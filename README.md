@@ -19,6 +19,39 @@ git submodule sync --recursive
 git submodule update --init --recursive
 ```
 
+## Development environment
+
+Warhammer uses a persistent Dev Container as its canonical development
+environment. The repository scripts start or reuse it through the Dev
+Container CLI, so the host needs only Git, Docker, and `devcontainer` (Docker
+Desktop, WSL, Linux, and macOS are supported). Node, pnpm, Codex, and project
+tools run inside the container; source remains in the host checkout.
+
+From the repository root, the usual workflow is:
+
+```sh
+./run.sh                 # build current source and start local Depot
+./dev.sh zsh             # open the canonical development shell
+./dev.sh pnpm test       # run a command in the container
+./run-codex.sh           # run Codex with persistent ~/.codex
+./stop.sh                # stop the development runtime, retaining its DB
+./status.sh              # inspect the development environment
+```
+
+The local development Depot UI is always
+`http://127.0.0.1:18086`. Its Compose project and database volume are separate
+from production. `docker compose up -d` from the repository root is the
+supported local-development invocation and does not require Tailscale. The
+production stack remains an explicit deployment workflow with its existing
+configured ports (normally Depot `19096`) and restricted Tailscale bindings;
+do not use the development volume for production data.
+
+VS Code may attach to the same Dev Container, but is optional and does not own
+the environment. Terminal users and CI use the same repository-owned
+`devcontainer up` / `devcontainer exec` boundary. `./reset-dev.sh --yes` is
+the explicit destructive operation for development-only containers and state;
+it never removes production volumes, backups, the pnpm store, or Codex home.
+
 The Depot submodule tracks Ash's fork at `https://github.com/pbert5/depot.git` (currently the same pinned commit as upstream). Private lists are maintained at `https://github.com/pbert5/warhammer-lists.git` and are accessed over HTTPS using the GitHub CLI credential helper.
 
 ## Deployment

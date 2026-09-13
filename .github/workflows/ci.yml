@@ -2,8 +2,10 @@ name: Compose CI
 
 on:
   push:
-    branches: [make-it-work]
+    branches: [main]
   pull_request:
+    branches: [main]
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -14,8 +16,6 @@ concurrency:
 
 env:
   DEPOT_POSTGRES_PASSWORD: ci-disposable-password
-  DEPOT_TAILSCALE_IPV4_ADDR: 127.0.0.1
-  DEPOT_TAILSCALE_ADDR: 127.0.0.1
 
 jobs:
   fast-checks:
