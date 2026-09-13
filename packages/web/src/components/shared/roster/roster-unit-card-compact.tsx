@@ -91,13 +91,15 @@ const RosterUnitCardCompact: FC<RosterUnitCardCompactProps> = ({
           <div className="flex flex-wrap items-center gap-1">
             {isWarlord ? (
               <span
-                role="img"
-                aria-label="Warlord"
-                title="Warlord"
-                className="mr-1 shrink-0 text-accent"
+                className="mr-1 flex shrink-0 items-center gap-1"
                 data-testid="unit-warlord-tag"
               >
-                <Crown size={14} aria-hidden />
+                <span role="img" aria-label="Warlord" title="Warlord" className="text-accent">
+                  <Crown size={14} aria-hidden />
+                </span>
+                <Tag variant="primary" size="sm">
+                  Warlord
+                </Tag>
               </span>
             ) : null}
             {unit.datasheet.isForgeWorld ? (
