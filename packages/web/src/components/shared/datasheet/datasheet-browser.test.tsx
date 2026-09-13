@@ -187,6 +187,32 @@ describe('DatasheetBrowser', () => {
     expect(screen.queryByTestId('datasheet-category-infantry')).not.toBeInTheDocument();
   });
 
+  it('categorises catalogue entries from detachment ability grant prose', () => {
+    const datasheet = createMockDatasheet({
+      id: 'captain',
+      slug: 'captain',
+      name: 'Captain',
+      keywords: keyword('INFANTRY')
+    });
+
+    render(
+      <TestWrapper>
+        <DatasheetBrowser
+          datasheets={[datasheet]}
+          catalogueMode
+          effectiveKeywordAbilities={[{
+            id: 'detachment-rule',
+            description: 'Your INFANTRY units gain the CHARACTER keyword.'
+          }]}
+          renderDatasheet={(sheet) => <span>{sheet.name}</span>}
+        />
+      </TestWrapper>
+    );
+
+    expect(screen.getByTestId('datasheet-category-character')).toHaveTextContent('Characters1');
+    expect(screen.queryByTestId('datasheet-category-infantry')).not.toBeInTheDocument();
+  });
+
   it('shows search clear only when the query is non-empty and clears the query only', async () => {
     const roleDatasheets = [
       createMockDatasheet({
