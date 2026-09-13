@@ -129,6 +129,7 @@ const addNameMapping = (map: Map<string, Set<string>>, name: string | undefined,
 const normaliseLoadoutItem = (text: string) =>
   text
     .replace(/<[^>]*>/g, '')
+    .replace(/^\d+\s*x?\s+/i, '')
     .replace(/^(a |an |the |and )/i, '')
     .trim()
     .toLowerCase();

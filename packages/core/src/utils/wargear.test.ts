@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import type { DatasheetWargear } from '../types/wahapedia.js';
-import { formatWargearDisplayName, groupWargearProfiles } from './wargear.js';
+import type { Wargear } from '../types/depot.js';
+import {
+  formatWargearDisplayName,
+  getDefaultWargearSelection,
+  groupWargearProfiles,
+  parseLoadoutWargear
+} from './wargear.js';
 
 const createEntry = (overrides: Partial<DatasheetWargear> = {}): DatasheetWargear => ({
   datasheetId: 'ds-1',
@@ -81,5 +87,48 @@ describe('profile separators', () => {
     ]);
 
     expect(formatWargearDisplayName(weapon)).toBe('Plasma pistol (standard / supercharge)');
+  });
+});
+
+const createWargear = (overrides: Partial<Wargear> = {}): Wargear => ({
+  id: 'ds-1:bolt-pistol',
+  datasheetId: 'ds-1',
+  line: '1',
+  name: 'Bolt pistol',
+  type: 'Ranged',
+  profiles: [],
+  ...overrides
+});
+
+describe('parseLoadoutWargear', () => {
+  const boltPistol = createWargear();
+  const chainsword = createWargear({ id: 'ds-1:chainsword', line: '2', name: 'Chainsword', type: 'Melee' });
+  const wargear = [boltPistol, chainsword];
+
+  it.each([
+    ['1 Bolt pistol', ['ds-1:bolt-pistol']],
+    ['2x Chainsword', ['ds-1:chainsword']],
+    ['<b>1</b> Bolt pistol; <i>2</i> Chainsword', ['ds-1:bolt-pistol', 'ds-1:chainsword']],
+    ['Bolt pistol; Chainsword', ['ds-1:bolt-pistol', 'ds-1:chainsword']]
+  ])('normalizes quantity prefixes in %s', (items, expected) => {
+    expect(parseLoadoutWargear(`Unit equipped with: ${items}`, wargear)).toEqual(expected);
+  });
+
+  it('returns no matches for a quantity-free loadout', () => {
+    expect(parseLoadoutWargear('Unit has no equipment listed.', wargear)).toEqual([]);
+  });
+
+  it('returns canonical available wargear objects for default selection', () => {
+    const selection = getDefaultWargearSelection({
+      id: 'ds-1',
+      name: 'Unit',
+      factionId: 'faction',
+      loadout: 'Unit equipped with: 1 Bolt pistol; 2x Chainsword',
+      wargear
+    } as never);
+
+    expect(selection).toEqual(wargear);
+    expect(selection[0]).toBe(boltPistol);
+    expect(selection[1]).toBe(chainsword);
   });
 });
