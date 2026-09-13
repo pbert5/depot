@@ -1,0 +1,60 @@
+# Secure operator deployment overlay. This file is intentionally never loaded
+# by plain `docker compose up`; scripts/up.sh and related operator commands
+# select it explicitly after loading .env.local.
+services:
+  depot-db:
+    environment:
+      POSTGRES_PASSWORD: "${DEPOT_POSTGRES_PASSWORD:?Set DEPOT_POSTGRES_PASSWORD in .env.local}"
+    volumes:
+      - depot-db-data:/var/lib/postgresql/data
+
+  depot-api:
+    environment:
+      DATABASE_URL: "postgresql://${DEPOT_POSTGRES_USER:-depot}:${DEPOT_POSTGRES_PASSWORD:?Set DEPOT_POSTGRES_PASSWORD in .env.local}@depot-db:5432/${DEPOT_POSTGRES_DB:-depot}"
+
+  depot-web:
+    ports: !override
+      - target: 80
+        published: "${DEPOT_PORT:-19096}"
+        host_ip: "127.0.0.1"
+        protocol: tcp
+      - target: 80
+        published: "${DEPOT_PORT:-19096}"
+        host_ip: "${DEPOT_TAILSCALE_IPV4_ADDR:?Set DEPOT_TAILSCALE_IPV4_ADDR in .env.local}"
+        protocol: tcp
+      - target: 80
+        published: "${DEPOT_PORT:-19096}"
+        host_ip: "${DEPOT_TAILSCALE_ADDR:?Set DEPOT_TAILSCALE_ADDR in .env.local}"
+        protocol: tcp
+
+  home:
+    ports: !override
+      - target: 80
+        published: "${WARHAMMER_HOME_PORT:-19095}"
+        host_ip: "127.0.0.1"
+      - target: 80
+        published: "${WARHAMMER_HOME_PORT:-19095}"
+        host_ip: "${DEPOT_TAILSCALE_IPV4_ADDR:?Set DEPOT_TAILSCALE_IPV4_ADDR in .env.local}"
+      - target: 80
+        published: "${WARHAMMER_HOME_PORT:-19095}"
+        host_ip: "${DEPOT_TAILSCALE_ADDR:?Set DEPOT_TAILSCALE_ADDR in .env.local}"
+
+  munda-web:
+    ports: !override
+      - target: 3000
+        published: "${MUNDA_PORT:-19097}"
+        host_ip: "127.0.0.1"
+      - target: 3000
+        published: "${MUNDA_PORT:-19097}"
+        host_ip: "${DEPOT_TAILSCALE_IPV4_ADDR:?Set DEPOT_TAILSCALE_IPV4_ADDR in .env.local}"
+      - target: 3000
+        published: "${MUNDA_PORT:-19097}"
+        host_ip: "${DEPOT_TAILSCALE_ADDR:?Set DEPOT_TAILSCALE_ADDR in .env.local}"
+    environment:
+      NEXT_PUBLIC_APP_URL: "${MUNDA_APP_URL:-http://localhost:19097}"
+
+volumes:
+  depot-db-data:
+    # Preserve the existing operator volume by default. Override this name
+    # during an intentional migration, never from a development helper.
+    name: "${DEPOT_DB_VOLUME_NAME:-warhammer_depot-db-data}"

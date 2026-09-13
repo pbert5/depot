@@ -1,3 +1,8 @@
+name: warhammer-dev
+
+# The default Compose file is deliberately a safe, disposable local
+# development topology. Production deployment scripts add
+# compose.production.yaml explicitly.
 services:
   depot-db:
     image: postgres:17-alpine
@@ -5,7 +10,9 @@ services:
     environment:
       POSTGRES_DB: "${DEPOT_POSTGRES_DB:-depot}"
       POSTGRES_USER: "${DEPOT_POSTGRES_USER:-depot}"
-      POSTGRES_PASSWORD: "${DEPOT_POSTGRES_PASSWORD:?Set DEPOT_POSTGRES_PASSWORD in .env.local}"
+      # This value is only for the isolated development project. Production
+      # scripts require DEPOT_POSTGRES_PASSWORD in compose.production.yaml.
+      POSTGRES_PASSWORD: "${DEPOT_POSTGRES_PASSWORD:-warhammer-dev-only}"
     volumes:
       - depot-db-data:/var/lib/postgresql/data
     healthcheck:
@@ -29,7 +36,7 @@ services:
     environment:
       PORT: 8787
       DEPOT_USER_ID: "${DEPOT_USER_ID:-00000000-0000-0000-0000-000000000001}"
-      DATABASE_URL: "postgresql://${DEPOT_POSTGRES_USER:-depot}:${DEPOT_POSTGRES_PASSWORD:?Set DEPOT_POSTGRES_PASSWORD in .env.local}@depot-db:5432/${DEPOT_POSTGRES_DB:-depot}"
+      DATABASE_URL: "postgresql://${DEPOT_POSTGRES_USER:-depot}:${DEPOT_POSTGRES_PASSWORD:-warhammer-dev-only}@depot-db:5432/${DEPOT_POSTGRES_DB:-depot}"
     depends_on:
       depot-db:
         condition: service_healthy
@@ -55,16 +62,8 @@ services:
     restart: unless-stopped
     ports:
       - target: 80
-        published: "${DEPOT_PORT:-19096}"
+        published: "${DEPOT_PORT:-18086}"
         host_ip: "127.0.0.1"
-        protocol: tcp
-      - target: 80
-        published: "${DEPOT_PORT:-19096}"
-        host_ip: "${DEPOT_TAILSCALE_IPV4_ADDR:?Set DEPOT_TAILSCALE_IPV4_ADDR in .env.local}"
-        protocol: tcp
-      - target: 80
-        published: "${DEPOT_PORT:-19096}"
-        host_ip: "${DEPOT_TAILSCALE_ADDR:?Set DEPOT_TAILSCALE_ADDR in .env.local}"
         protocol: tcp
     init: true
     depends_on:
@@ -92,14 +91,8 @@ services:
       - ./nginx/launcher.conf:/etc/nginx/conf.d/default.conf:ro
     ports:
       - target: 80
-        published: "${WARHAMMER_HOME_PORT:-19095}"
+        published: "${WARHAMMER_HOME_PORT:-18085}"
         host_ip: "127.0.0.1"
-      - target: 80
-        published: "${WARHAMMER_HOME_PORT:-19095}"
-        host_ip: "${DEPOT_TAILSCALE_IPV4_ADDR:?Set DEPOT_TAILSCALE_IPV4_ADDR in .env.local}"
-      - target: 80
-        published: "${WARHAMMER_HOME_PORT:-19095}"
-        host_ip: "${DEPOT_TAILSCALE_ADDR:?Set DEPOT_TAILSCALE_ADDR in .env.local}"
     healthcheck:
       test: ["CMD", "wget", "--spider", "--quiet", "http://127.0.0.1/"]
 
@@ -120,7 +113,7 @@ services:
     environment:
       NODE_ENV: production
       HOSTNAME: 0.0.0.0
-      NEXT_PUBLIC_APP_URL: "${MUNDA_APP_URL:-http://localhost:19097}"
+      NEXT_PUBLIC_APP_URL: "${MUNDA_APP_URL:-http://localhost:18087}"
       NEXT_PUBLIC_SUPABASE_URL: "${MUNDA_SUPABASE_URL:-http://localhost:54321}"
       NEXT_PUBLIC_SUPABASE_ANON_KEY: "${MUNDA_SUPABASE_ANON_KEY:-local-anon-key}"
       MUNDA_SUPABASE_INTERNAL_URL: "${MUNDA_SUPABASE_INTERNAL_URL:-http://host.docker.internal:54321}"
@@ -131,14 +124,8 @@ services:
       - "host.docker.internal:host-gateway"
     ports:
       - target: 3000
-        published: "${MUNDA_PORT:-19097}"
+        published: "${MUNDA_PORT:-18087}"
         host_ip: "127.0.0.1"
-      - target: 3000
-        published: "${MUNDA_PORT:-19097}"
-        host_ip: "${DEPOT_TAILSCALE_IPV4_ADDR:?Set DEPOT_TAILSCALE_IPV4_ADDR in .env.local}"
-      - target: 3000
-        published: "${MUNDA_PORT:-19097}"
-        host_ip: "${DEPOT_TAILSCALE_ADDR:?Set DEPOT_TAILSCALE_ADDR in .env.local}"
     healthcheck:
       test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/').then(r=>process.exit(r.status<500?0:1)).catch(()=>process.exit(1))"]
 
@@ -197,3 +184,4 @@ services:
 
 volumes:
   depot-db-data:
+    name: warhammer-dev-depot-db-data

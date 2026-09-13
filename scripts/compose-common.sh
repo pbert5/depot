@@ -29,9 +29,14 @@ load_compose_environment() {
 }
 
 compose() {
+    # Operator scripts intentionally select the secure production overlay.
+    # Plain `docker compose` remains the localhost-only development topology.
+    project_name=${COMPOSE_PROJECT_NAME:-warhammer}
     if [ -f runtime/munda-supabase/env ]; then
-        docker compose --env-file .env.local --env-file runtime/munda-supabase/env "$@"
+        docker compose --project-name "$project_name" --env-file .env.local --env-file runtime/munda-supabase/env \
+            -f compose.yaml -f compose.production.yaml "$@"
     else
-        docker compose --env-file .env.local "$@"
+        docker compose --project-name "$project_name" --env-file .env.local \
+            -f compose.yaml -f compose.production.yaml "$@"
     fi
 }
