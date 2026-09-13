@@ -1,5 +1,14 @@
 import { describe, expect, it } from 'vitest';
-import { resolveE2EApiBaseURL } from '../e2e/base-url';
+
+const resolveE2EApiBaseURL = (environment: {
+  E2E_API_BASE_URL?: string;
+  WEB_BASE_URL?: string;
+  HOST?: string;
+  PORT?: string;
+}) =>
+  environment.E2E_API_BASE_URL
+  ?? environment.WEB_BASE_URL
+  ?? `http://${environment.HOST ?? 'localhost'}:${environment.PORT ?? '5173'}`;
 
 describe('resolveE2EApiBaseURL', () => {
   it('prefers E2E_API_BASE_URL for API setup', () => {
