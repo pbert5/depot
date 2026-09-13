@@ -1,8 +1,8 @@
 import { test as base, expect } from '@playwright/test';
+import { resolveE2EApiBaseURL } from './base-url';
 
 type WorkerFixtures = { e2eProfileId: string };
-const e2eBaseURL = process.env.WEB_BASE_URL
-  ?? `http://${process.env.HOST ?? 'localhost'}:${process.env.PORT ?? '5173'}`;
+const e2eBaseURL = resolveE2EApiBaseURL(process.env);
 
 export const test = base.extend<{}, WorkerFixtures>({
   e2eProfileId: [async ({ playwright }, use, workerInfo) => {
