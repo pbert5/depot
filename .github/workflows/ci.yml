@@ -32,6 +32,16 @@ jobs:
       - name: Initialize pinned Depot submodule
         run: git submodule update --init vendor/depot
 
+      - name: Run parent integration contract tests
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - name: Execute parent integration contract tests
+        run: |
+          python -m pip install --disable-pip-version-check pytest
+          python -m pytest integration/tests
+
       - name: Validate Compose configuration
         run: docker compose --profile test config --quiet
 

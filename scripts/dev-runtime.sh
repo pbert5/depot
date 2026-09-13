@@ -8,13 +8,18 @@ set -eu
 root=$(git rev-parse --show-toplevel)
 cd "$root"
 
+if [ "${COMPOSE_PROJECT_NAME:-warhammer-dev}" != "warhammer-dev" ]; then
+    echo "Refusing development runtime with non-development Compose project: ${COMPOSE_PROJECT_NAME}." >&2
+    exit 2
+fi
+
 parent_revision=$(git rev-parse HEAD)
 depot_revision=$(git -C vendor/depot rev-parse HEAD)
 export WARHAMMER_PARENT_REVISION="$parent_revision"
 export DEPOT_SOURCE_REVISION="$depot_revision"
 
 compose() {
-    docker compose "$@"
+    docker compose --project-name warhammer-dev "$@"
 }
 
 require_dev_project() {

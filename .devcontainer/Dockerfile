@@ -43,7 +43,15 @@ RUN chmod +x /opt/warhammer/bin/* \
 # host group ID into the image. Docker-socket access is already root-equivalent.
 RUN printf 'node ALL=(root) NOPASSWD: /usr/bin/docker, /usr/local/bin/docker\n' > /etc/sudoers.d/node-docker \
     && chmod 0440 /etc/sudoers.d/node-docker \
-    && printf '%s\n' '#!/bin/sh' 'exec sudo /usr/local/bin/docker "$@"' > /opt/warhammer/bin/docker \
+    && printf '%s\n' \
+       '#!/bin/sh' \
+       'for docker_cli in /usr/local/bin/docker /usr/bin/docker; do' \
+       '    if [ -x "$docker_cli" ] && [ "$docker_cli" != "$0" ]; then' \
+       '        exec sudo "$docker_cli" "$@"' \
+       '    fi' \
+       'done' \
+       'echo "Docker CLI not found in /usr/local/bin or /usr/bin." >&2' \
+       'exit 127' > /opt/warhammer/bin/docker \
     && chmod 0755 /opt/warhammer/bin/docker
 
 USER node
