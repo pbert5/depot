@@ -10,11 +10,12 @@ import { useToast } from '@/contexts/toast/context';
 import AppLayout from '@/components/layout';
 import { ErrorState, PageHeaderSkeleton, SectionHeader, SkeletonCard } from '@/components/ui';
 import UnitEditShell from '@/components/shared/unit-edit/unit-edit-shell';
-import type { UnitEditSelection } from '@/components/shared/unit-edit/unit-edit-shell';
+import type { UnitAttachmentTarget, UnitEditSelection } from '@/components/shared/unit-edit/unit-edit-shell';
 import EnhancementSelection from './_components/enhancement-selection';
 import WarlordSelection from './_components/warlord-selection';
 import { isCharacter } from '@depot/core/utils/datasheets';
 import { getRosterFactionName } from '@depot/core/utils/roster';
+import { getUnitAttachmentEligibility } from '@depot/core/utils/roster';
 import { getEligibleEnhancements, getUnitOrdinal } from '@depot/core/utils/roster-legality';
 import { modelCostsForOrdinal } from '@depot/core/utils/model-costs';
 
@@ -25,6 +26,7 @@ const EditRosterUnitForm: React.FC<{ unit: depot.RosterUnit }> = ({ unit }) => {
     updateUnitWargear,
     updateUnitWargearAbilities,
     updateUnitModelCost,
+    setUnitAttachment,
     applyEnhancement,
     removeEnhancement,
     setWarlord
@@ -42,16 +44,38 @@ const EditRosterUnitForm: React.FC<{ unit: depot.RosterUnit }> = ({ unit }) => {
   const factionName = getRosterFactionName(roster);
   const character = isCharacter(unit.datasheet);
   const eligibleEnhancements = getEligibleEnhancements(unit, roster);
+  const attachmentTargets: UnitAttachmentTarget[] = (() => {
+    if (unit.datasheet.leaders.length === 0) return [];
+    const compatible = roster.units.filter(
+      (target) => getUnitAttachmentEligibility(roster, unit.id, target.id).eligible
+    );
+    const counts = new Map<string, number>();
+    compatible.forEach((target) => counts.set(target.datasheet.name, (counts.get(target.datasheet.name) ?? 0) + 1));
+    const seen = new Map<string, number>();
+    return compatible.map((target) => {
+      const count = counts.get(target.datasheet.name) ?? 0;
+      const occurrence = (seen.get(target.datasheet.name) ?? 0) + 1;
+      seen.set(target.datasheet.name, occurrence);
+      return {
+        unit: target,
+        label: count > 1 ? `${target.datasheet.name} · Unit ${occurrence}` : target.datasheet.name
+      };
+    });
+  })();
 
   const handleSave = ({
     selectedWargear,
     selectedWargearAbilities,
-    selectedModelCost
+    selectedModelCost,
+    attachedToUnitId
   }: UnitEditSelection) => {
     try {
       // Update unit wargear
       updateUnitWargear(unitId, selectedWargear);
       updateUnitWargearAbilities(unitId, selectedWargearAbilities);
+      if (unit.datasheet.leaders.length > 0) {
+        setUnitAttachment(unitId, attachedToUnitId ?? null);
+      }
 
       // Handle enhancements - first remove existing ones for this unit
       const existingEnhancements = roster.enhancements.filter((e) => e.unitId === unitId);
@@ -135,6 +159,7 @@ const EditRosterUnitForm: React.FC<{ unit: depot.RosterUnit }> = ({ unit }) => {
           ) : null}
         </>
       }
+      attachmentTargets={attachmentTargets}
       onSave={handleSave}
     />
   );
