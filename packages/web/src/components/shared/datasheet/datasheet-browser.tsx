@@ -25,6 +25,7 @@ import {
   sortDatasheetsBySupplementPreference
 } from '@depot/core/utils/datasheets';
 import type { depot } from '@depot/core';
+import { getEffectiveKeywords } from '../../../../../core/src/utils/effective-keywords.js';
 import { getMinimumNumericPoints } from '@depot/core/utils/model-costs';
 import { searchItems } from '@depot/core/utils/search';
 import { Grid, Search } from '@/components/ui';
@@ -93,16 +94,9 @@ const effectiveCategory = <T extends DatasheetListItem>(
   abilities: EffectiveKeywordAbility[]
 ) => {
   if (!('keywords' in sheet) || abilities.length === 0) return getListItemCategory(sheet);
-  const keywords = new Set(sheet.keywords.map(({ keyword }) => keyword.trim().toLowerCase()));
-  for (const ability of abilities) {
-    for (const grant of ability.keywordGrants ?? []) {
-      if (keywords.has(grant.targetKeyword.trim().toLowerCase())) {
-        keywords.add(grant.grantedKeyword.trim().toLowerCase());
-      }
-    }
-  }
+  const keywords = getEffectiveKeywords(sheet, abilities);
   return deriveDatasheetCategory({
-    keywords: [...keywords].map((keyword) => ({ keyword, datasheetId: sheet.id, model: '', isFactionKeyword: 'false' }))
+    keywords
   });
 };
 
