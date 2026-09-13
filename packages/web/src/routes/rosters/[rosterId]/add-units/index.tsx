@@ -11,7 +11,7 @@ import AppLayout from '@/components/layout';
 import { Loader } from '@/components/ui';
 import { RosterHeader } from '@/components/shared';
 import AddUnitsView from '@/components/shared/add-units-view';
-import { getRosterSubtitle } from '@depot/core/utils/roster';
+import { getRosterDetachments, getRosterSubtitle } from '@depot/core/utils/roster';
 
 const AddRosterUnitsView: FC = () => {
   const { state: roster, addUnitsAndPersist } = useRoster();
@@ -61,6 +61,7 @@ const AddRosterUnitsView: FC = () => {
       title="Add units"
       subtitle={`${roster.name} · ${getRosterSubtitle(roster)}`}
       headerStats={<RosterHeader roster={roster} />}
+      effectiveKeywordAbilities={getRosterDetachments(roster).flatMap((detachment) => detachment.abilities)}
       onConfirm={handleAddSelectedUnits}
     />
   );
