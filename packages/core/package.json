@@ -51,6 +51,11 @@
       "import": "./dist/utils/datasheets.js",
       "default": "./dist/utils/datasheets.js"
     },
+    "./utils/effective-keywords": {
+      "types": "./dist/utils/effective-keywords.d.ts",
+      "import": "./dist/utils/effective-keywords.js",
+      "default": "./dist/utils/effective-keywords.js"
+    },
     "./utils/saved": {
       "types": "./dist/utils/saved.d.ts",
       "import": "./dist/utils/saved.js",
