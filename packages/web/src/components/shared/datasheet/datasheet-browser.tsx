@@ -24,7 +24,7 @@ import {
   shouldResetSupplementSelection,
   sortDatasheetsBySupplementPreference
 } from '@depot/core/utils/datasheets';
-import type { DetachmentAbility } from '@depot/core';
+import type { depot } from '@depot/core';
 import { getMinimumNumericPoints } from '@depot/core/utils/model-costs';
 import { searchItems } from '@depot/core/utils/search';
 import { Grid, Search } from '@/components/ui';
@@ -34,6 +34,10 @@ import useDebounce from '@/hooks/use-debounce';
 import { cx } from '@/utils/cx';
 import DatasheetSupplementTabs from './datasheet-supplement-tabs';
 import DatasheetListItemCard from './datasheet-list-item-card';
+
+type EffectiveKeywordAbility = Pick<depot.DetachmentAbility, 'id' | 'description'> & {
+  keywordGrants?: depot.DetachmentAbility['keywordGrants'];
+};
 
 interface DatasheetBrowserProps<T extends DatasheetListItem> {
   datasheets: T[];
@@ -46,7 +50,7 @@ interface DatasheetBrowserProps<T extends DatasheetListItem> {
   resultsClassName?: string;
   /** Enables the richer, stateful catalogue used by add-units routes. */
   catalogueMode?: boolean;
-  effectiveKeywordAbilities?: Pick<DetachmentAbility, 'id' | 'description' | 'keywordGrants'>[];
+  effectiveKeywordAbilities?: EffectiveKeywordAbility[];
 }
 
 type RoleTab = 'all' | BattlefieldRole | import('@depot/core/utils/datasheets').DatasheetCategory;
@@ -86,7 +90,7 @@ const numericPoints = <T extends DatasheetListItem>(item: T): number => {
 
 const effectiveCategory = <T extends DatasheetListItem>(
   sheet: T,
-  abilities: Pick<DetachmentAbility, 'id' | 'description' | 'keywordGrants'>[]
+  abilities: EffectiveKeywordAbility[]
 ) => {
   if (!('keywords' in sheet) || abilities.length === 0) return getListItemCategory(sheet);
   const keywords = new Set(sheet.keywords.map(({ keyword }) => keyword.trim().toLowerCase()));

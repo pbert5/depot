@@ -130,6 +130,19 @@ export const rosterReducer = (state: RosterState, action: RosterAction): RosterS
         )
       });
 
+    case 'SET_UNIT_ATTACHMENT': {
+      const { leaderUnitId, bodyguardUnitId } = action.payload;
+      if (bodyguardUnitId !== null && !getUnitAttachmentEligibility(state, leaderUnitId, bodyguardUnitId).eligible) {
+        return state;
+      }
+      return finalize({
+        ...state,
+        units: state.units.map((unit) =>
+          unit.id === leaderUnitId ? { ...unit, attachedToUnitId: bodyguardUnitId } : unit
+        )
+      });
+    }
+
     case 'REMOVE_UNIT':
       return finalize({
         ...state,

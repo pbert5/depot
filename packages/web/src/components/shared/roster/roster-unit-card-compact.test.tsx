@@ -18,4 +18,15 @@ describe('RosterUnitCardCompact', () => {
 
     expect(screen.getByTestId('unit-warlord-tag')).toHaveTextContent('Warlord');
   });
+
+  it('shows the bodyguard relationship for an attached leader', () => {
+    render(
+      <RosterUnitCardCompact
+        unit={{ ...unit, attachedToUnitId: 'bodyguard-1' }}
+        attachedToUnitName="Bodyguard · Unit 1"
+      />
+    );
+
+    expect(screen.getByTestId('unit-attachment')).toHaveTextContent('Attached to Bodyguard · Unit 1');
+  });
 });

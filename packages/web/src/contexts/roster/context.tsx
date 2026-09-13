@@ -220,6 +220,8 @@ export const RosterProvider: FC<RosterProviderProps> = ({ children, rosterId }) 
         }),
       updateUnitModelCost: (rosterUnitId, modelCost) =>
         stageRosterChange({ type: 'UPDATE_UNIT_MODEL_COST', payload: { rosterUnitId, modelCost } }),
+      setUnitAttachment: (leaderUnitId, bodyguardUnitId) =>
+        stageRosterChange({ type: 'SET_UNIT_ATTACHMENT', payload: { leaderUnitId, bodyguardUnitId } }),
       applyEnhancement: (enhancement, targetUnitId) =>
         stageRosterChange({ type: 'APPLY_ENHANCEMENT', payload: { enhancement, targetUnitId } }),
       removeEnhancement: (enhancementId) =>

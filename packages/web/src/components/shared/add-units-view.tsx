@@ -12,7 +12,11 @@ import { useRosterUnitSelection } from '@/hooks/use-roster-unit-selection';
 import type { SelectedUnit } from '@/hooks/use-roster-unit-selection';
 import { useSettingsContext } from '@/contexts/settings/context';
 import { groupBy } from '@depot/core/utils/common';
-import type { DetachmentAbility } from '@depot/core';
+import type { depot } from '@depot/core';
+
+type EffectiveKeywordAbility = Pick<depot.DetachmentAbility, 'id' | 'description'> & {
+  keywordGrants?: depot.DetachmentAbility['keywordGrants'];
+};
 
 interface AddUnitsViewProps {
   factionSlug?: string;
@@ -23,7 +27,7 @@ interface AddUnitsViewProps {
   subtitle?: string;
   /** Budget context pinned above the list — e.g. the roster points bar. */
   headerStats?: ReactNode;
-  effectiveKeywordAbilities?: Pick<DetachmentAbility, 'id' | 'description' | 'keywordGrants'>[];
+  effectiveKeywordAbilities?: EffectiveKeywordAbility[];
   /** Noun used in the info alert copy, e.g. "roster" or "collection". */
   onConfirm: (selectedUnits: SelectedUnit[], clearSelection: () => void) => void | Promise<void>;
 }

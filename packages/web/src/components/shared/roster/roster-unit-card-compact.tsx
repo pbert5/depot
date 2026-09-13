@@ -24,6 +24,7 @@ interface RosterUnitCardCompactProps {
   className?: string;
   isWarlord?: boolean;
   enhancementName?: string;
+  attachedToUnitName?: string;
   /** Legality problems attributed to this unit; renders the invalid treatment. */
   issues?: string[];
 }
@@ -45,6 +46,7 @@ const RosterUnitCardCompact: FC<RosterUnitCardCompactProps> = ({
   className,
   isWarlord = false,
   enhancementName,
+  attachedToUnitName,
   issues = []
 }) => {
   const unitPoints = parseInt(unit.modelCost.cost, 10) || 0;
@@ -144,6 +146,12 @@ const RosterUnitCardCompact: FC<RosterUnitCardCompactProps> = ({
                 {enhancementName}
               </Tag>
             </div>
+          ) : null}
+
+          {attachedToUnitName ? (
+            <p className="text-[11px] leading-snug text-muted" data-testid="unit-attachment">
+              Attached to {attachedToUnitName}
+            </p>
           ) : null}
 
           {issues.length > 0 ? (
