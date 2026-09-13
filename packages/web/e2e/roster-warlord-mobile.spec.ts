@@ -37,8 +37,8 @@ test.describe('Orks Warlord mobile workflow', () => {
     });
     await page.getByTestId('save-button').click();
     await expect(page).toHaveURL(/\/edit#unit-/);
-    await expect(page.getByTestId('unit-warlord-tag')).toHaveTextContent('Warlord');
-    await expect(page.getByTestId('roster-save-status')).toHaveTextContent('Save failed');
+    await expect(page.getByTestId('unit-warlord-tag')).toContainText('Warlord');
+    await expect(page.getByTestId('roster-save-status')).toContainText('Save failed');
     const status = page.getByTestId('roster-save-status');
     const statusBox = await status.boundingBox();
     const retry = status.getByRole('button', { name: 'Retry' });
