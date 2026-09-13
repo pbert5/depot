@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { profilesApi, type Profile, type ProfileList } from '@/data/profiles';
 import { LOCAL_PROFILE_ID, offlineStorage } from '@/data/offline-storage';
@@ -87,6 +87,43 @@ describe('ProfileProvider', () => {
     await waitFor(() =>
       expect(screen.getByRole('status')).toHaveTextContent('profile-two:League night')
     );
+    expect(offlineStorage.getProfileId()).toBe(two.id);
+  });
+
+  it('ignores an out-of-order refresh after create and select', async () => {
+    let resolveStale!: (value: ProfileList) => void;
+    let resolveFresh!: (value: ProfileList) => void;
+    const staleRefresh = new Promise<ProfileList>((resolve) => {
+      resolveStale = resolve;
+    });
+    const freshRefresh = new Promise<ProfileList>((resolve) => {
+      resolveFresh = resolve;
+    });
+    const list = vi
+      .fn()
+      .mockResolvedValueOnce({ profiles: [local, two], active: local, activeProfileId: local.id })
+      .mockReturnValueOnce(staleRefresh)
+      .mockReturnValueOnce(freshRefresh);
+    renderProvider(list);
+
+    await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent('Local'));
+    act(() => window.dispatchEvent(new Event('depot:profile-changed')));
+    vi.spyOn(profilesApi, 'select').mockResolvedValue(two);
+    fireEvent.click(screen.getByRole('button', { name: 'switch' }));
+    act(() => window.dispatchEvent(new Event('depot:profile-changed')));
+    await waitFor(() => expect(list).toHaveBeenCalledTimes(3));
+    await waitFor(() => expect(offlineStorage.getProfileId()).toBe(two.id));
+
+    await act(async () => {
+      resolveFresh({ profiles: [local, two], active: two, activeProfileId: two.id });
+    });
+    await waitFor(() =>
+      expect(screen.getByRole('status')).toHaveTextContent('profile-two:League night')
+    );
+    await act(async () => {
+      resolveStale({ profiles: [local, two], active: local, activeProfileId: local.id });
+    });
+    expect(screen.getByRole('status')).toHaveTextContent('profile-two:League night');
     expect(offlineStorage.getProfileId()).toBe(two.id);
   });
 
