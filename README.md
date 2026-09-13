@@ -30,7 +30,7 @@ tools run inside the container; source remains in the host checkout.
 From the repository root, the usual workflow is:
 
 ```sh
-./run.sh                 # build current source and start local Depot
+./run.sh                 # build current source and start the Depot-only runtime
 ./dev.sh zsh             # open the canonical development shell
 ./dev.sh pnpm test       # run a command in the container
 ./run-codex.sh           # run Codex with persistent ~/.codex
@@ -41,7 +41,10 @@ From the repository root, the usual workflow is:
 The local development Depot UI is always
 `http://127.0.0.1:18086`. Its Compose project and database volume are separate
 from production. `docker compose up -d` from the repository root is the
-supported local-development invocation and does not require Tailscale. The
+supported full-Compose local-development invocation and does not require
+Tailscale. The terminal-first `./run.sh` workflow is the portable Depot-only
+entrypoint: it builds and starts `depot-db`, `depot-api`, and `depot-web`
+without requiring the optional Munda/Supabase stack. The
 production stack remains an explicit deployment workflow with its existing
 configured ports (normally Depot `19096`) and restricted Tailscale bindings;
 do not use the development volume for production data.
@@ -97,11 +100,11 @@ cp .env.local.example .env.local
 `scripts/build.sh` validates the rendered Compose file and builds only the
 requested services without pulling floating base tags; frozen lockfiles and
 OCI revision labels make the checked-out inputs and built images auditable.
-`up.sh` intentionally does not build Depot,
-so restarts reuse the existing image. After a build, use
-`./scripts/recreate.sh` to replace containers without removing the named
-`depot-db-data` volume. `./scripts/status.sh` prints health, revision proof,
-and the network-guard state without exposing credentials.
+`up.sh` builds Depot and Munda from the checked-out sources before recreating
+the production containers. After a build, use `./scripts/recreate.sh` to
+replace containers without removing the named `depot-db-data` volume.
+`./scripts/status.sh` prints health, revision proof, and the network-guard
+state without exposing credentials.
 
 ### Binding and access
 

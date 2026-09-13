@@ -45,7 +45,7 @@ mutate repository, Git, Docker, database, or runtime state.
 docker compose up -d
 docker compose run --rm --no-deps -T chrome-devtools-mcp
 
-# Depot standalone and deterministic checks
+# Depot tests and deterministic checks
 docker compose up -d --build
 docker compose --profile test run --rm depot-test pnpm test
 docker compose --profile test run --rm depot-test pnpm typecheck
@@ -71,9 +71,9 @@ cp .env.e2e.example .env.e2e  # set disposable values; never commit .env.e2e
 # its database in project-specific depot-e2e-db-data. Purge retains the row
 # and fails closed if the row or post-purge counts are wrong.
 
-# Munda standalone
-docker compose -f compose.standalone.yaml up -d --build
-docker compose -f compose.standalone.yaml run --rm --no-deps -T chrome-devtools-mcp
+# Munda Manager standalone (the independently maintained submodule topology)
+docker compose -f vendor/mundamanager/compose.standalone.yaml up -d --build
+docker compose -f vendor/mundamanager/compose.standalone.yaml run --rm --no-deps -T chrome-devtools-mcp
 ```
 
 Browser agents use service DNS for integrated checks and published front doors
