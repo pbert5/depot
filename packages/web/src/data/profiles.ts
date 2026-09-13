@@ -26,6 +26,8 @@ export interface ProfilesAdapter {
 /** Reserved disposable identity used by the E2E Compose fixture. */
 export const RESERVED_E2E_PROFILE_ID = '00000000-0000-0000-0000-000000000002';
 
+const notifyProfileChanged = () => window.dispatchEvent(new Event('depot:profile-changed'));
+
 const request = async <T>(path: string, init?: RequestInit): Promise<T> => {
   const response = await fetch(`/api${path}`, {
     ...init,
@@ -48,21 +50,29 @@ const request = async <T>(path: string, init?: RequestInit): Promise<T> => {
 
 export const profilesApi: ProfilesAdapter = {
   list: () => request<ProfileList>('/profiles'),
-  create: (displayName) =>
-    request<Profile>('/profiles', {
+  create: async (displayName) => {
+    const profile = await request<Profile>('/profiles', {
       method: 'POST',
       body: JSON.stringify({ displayName })
-    }),
-  select: async (profileId) => {
-    const profile = await request<Profile>(`/profiles/${encodeURIComponent(profileId)}/select`, { method: 'POST' });
-    window.dispatchEvent(new Event('depot:profile-changed'));
+    });
+    notifyProfileChanged();
     return profile;
   },
-  rename: (profileId, displayName) =>
-    request<Profile>(`/profiles/${encodeURIComponent(profileId)}`, {
+  select: async (profileId) => {
+    const profile = await request<Profile>(`/profiles/${encodeURIComponent(profileId)}/select`, {
+      method: 'POST'
+    });
+    notifyProfileChanged();
+    return profile;
+  },
+  rename: async (profileId, displayName) => {
+    const profile = await request<Profile>(`/profiles/${encodeURIComponent(profileId)}`, {
       method: 'PATCH',
       body: JSON.stringify({ displayName })
-    })
+    });
+    notifyProfileChanged();
+    return profile;
+  }
 };
 
 export const hideReservedProfiles = (profiles: Profile[]): Profile[] =>
