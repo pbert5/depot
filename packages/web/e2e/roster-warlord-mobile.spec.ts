@@ -92,12 +92,17 @@ test.describe('Orks Warlord mobile workflow', () => {
     await bottomAction.click();
     await expect(page).toHaveURL(`${roster.rosterBaseUrl}/add-units`);
     await page.goBack();
-    await expect(page).toHaveURL(roster.rosterEditUrl);
+    const rosterEditPath = new URL(roster.rosterEditUrl).pathname;
+    await expect
+      .poll(() => {
+        const currentUrl = new URL(page.url());
+        return currentUrl.pathname === rosterEditPath && /^#unit-/.test(currentUrl.hash);
+      })
+      .toBe(true);
     await expect(runtherdCard).toBeVisible();
 
     await runtherdCard.click();
     await expect(page.getByRole('switch', { name: 'Nominate as warlord' })).toBeChecked();
-    await page.getByRole('switch', { name: 'Nominate as warlord' }).uncheck();
 
     let failedPutCount = 0;
     const failOnePut = async (route: import('@playwright/test').Route) => {
@@ -109,10 +114,11 @@ test.describe('Orks Warlord mobile workflow', () => {
       await route.continue();
     };
     await page.route('**/api/rosters/**', failOnePut);
+    await page.getByRole('switch', { name: 'Nominate as warlord' }).uncheck();
     await page.getByTestId('save-button').click();
     await expect(page).toHaveURL(/\/edit#unit-/);
     const failedStatus = statuses.filter({ hasText: 'Save failed' }).first();
-    await expect(failedStatus).toBeVisible({ timeout: 5000 });
+    await expect(failedStatus).toBeVisible({ timeout: 1500 });
     const retry = page.getByRole('button', { name: 'Retry' }).first();
     await expect(retry).toBeVisible();
     await expect(retry).toBeEnabled();
