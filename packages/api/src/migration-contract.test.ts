@@ -17,7 +17,21 @@ test('profile migration preserves rows and scopes document identity per profile'
 });
 
 test('migration runner discovers ordered SQL migrations', async () => {
-  const source = await readFile(join(dirname(fileURLToPath(import.meta.url)), 'migrate.js'), 'utf8');
+  const source = await readFile(
+    join(dirname(fileURLToPath(import.meta.url)), 'migrate.js'),
+    'utf8'
+  );
   assert.match(source, /readdir\(join\(here, '\.\.\/migrations'\)\)/);
   assert.match(source, /\.sort\(\)/);
+});
+
+test('profile kind migration backfills legacy users as main and constrains future values', async () => {
+  const sql = await readFile(join(migrations, '003_profile_kinds.sql'), 'utf8');
+  assert.match(sql, /ADD COLUMN IF NOT EXISTS kind text/);
+  assert.match(sql, /UPDATE users\s+SET kind = 'main'\s+WHERE kind IS NULL/i);
+  assert.match(sql, /SET DEFAULT 'main'/i);
+  assert.match(sql, /SET NOT NULL/i);
+  assert.match(sql, /ADD CONSTRAINT users_kind_check/i);
+  assert.match(sql, /CHECK \(kind IN \('main', 'e2e'\)\)/i);
+  assert.doesNotMatch(sql, /DELETE\s+FROM/i);
 });

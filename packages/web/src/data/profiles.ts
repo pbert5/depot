@@ -8,6 +8,7 @@ export interface Profile {
   id: string;
   displayName: string;
   createdAt: string;
+  kind: 'main' | 'e2e';
 }
 
 export interface ProfileList {
@@ -18,7 +19,7 @@ export interface ProfileList {
 
 export interface ProfilesAdapter {
   list: () => Promise<ProfileList>;
-  create: (displayName: string) => Promise<Profile>;
+  create: (displayName: string, kind?: Profile['kind']) => Promise<Profile>;
   select: (profileId: string) => Promise<Profile>;
   rename: (profileId: string, displayName: string) => Promise<Profile>;
 }
@@ -50,10 +51,10 @@ const request = async <T>(path: string, init?: RequestInit): Promise<T> => {
 
 export const profilesApi: ProfilesAdapter = {
   list: () => request<ProfileList>('/profiles'),
-  create: async (displayName) => {
+  create: async (displayName, kind) => {
     const profile = await request<Profile>('/profiles', {
       method: 'POST',
-      body: JSON.stringify({ displayName })
+      body: JSON.stringify({ displayName, ...(kind ? { kind } : {}) })
     });
     notifyProfileChanged();
     return profile;
