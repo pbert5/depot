@@ -76,11 +76,16 @@ docker compose -f vendor/mundamanager/compose.standalone.yaml up -d --build
 docker compose -f vendor/mundamanager/compose.standalone.yaml run --rm --no-deps -T chrome-devtools-mcp
 ```
 
-Browser agents use service DNS for integrated checks and published front doors
-for final acceptance. Inspect launcher, Depot, and Munda at desktop, 390x844,
-and 360px-wide views; verify catalogue search/filter/sort/state/navigation,
-focus, overflow, console, and failed requests. Chrome DevTools MCP is the
-primary interactive path; Playwright is deterministic regression coverage.
+Browser agents use `http://depot-web` through Compose service DNS for
+internal integrated checks. The disposable browser container uses stdio MCP and
+container-local CDP at `127.0.0.1:9222`; this path does not require a
+bridge-to-host Tailscale hairpin. Published `100.110.27.100:19096` is a
+separate final-ingress path for the host, a phone, and real Tailnet peers, so
+validate it from those clients independently. Inspect launcher, Depot, and
+Munda at desktop, 390x844, and 360px-wide views; verify catalogue
+search/filter/sort/state/navigation, focus, overflow, console, and failed
+requests. Chrome DevTools MCP is the primary interactive path; Playwright is
+deterministic regression coverage.
 
 Failure classes are: PRODUCT REGRESSION, STALE TEST CONTRACT, TEST HARNESS
 DEFECT, MCP INTEGRATION DEFECT, COMPOSE TOPOLOGY DEFECT, AUTH/SESSION SETUP,
