@@ -35,3 +35,13 @@ test('profile kind migration backfills legacy users as main and constrains futur
   assert.match(sql, /CHECK \(kind IN \('main', 'e2e'\)\)/i);
   assert.doesNotMatch(sql, /DELETE\s+FROM/i);
 });
+
+test('profile kind migration promotes only exact repository-owned E2E fixture names', async () => {
+  const sql = await readFile(join(migrations, '003_profile_kinds.sql'), 'utf8');
+  assert.match(sql, /WHERE kind IS NULL\s+AND/i);
+  assert.match(sql, /\^E2E chromium-desktop worker \[0-9\]\+\$/);
+  assert.match(sql, /\^E2E chromium-mobile-390 worker \[0-9\]\+\$/);
+  assert.match(sql, /\^E2E chromium-narrow-360 worker \[0-9\]\+\$/);
+  assert.match(sql, /display_name = 'E2E isolation proof other worker'/);
+  assert.doesNotMatch(sql, /E2E (?:chromium|isolation).*worker.*\*/i);
+});
