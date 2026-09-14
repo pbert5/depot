@@ -1,5 +1,14 @@
 -- Classify existing and new profiles without changing users or documents.
 ALTER TABLE users ADD COLUMN IF NOT EXISTS kind text;
+UPDATE users
+SET kind = 'e2e'
+WHERE kind IS NULL
+  AND (
+    display_name ~ '^E2E chromium-desktop worker [0-9]+$'
+    OR display_name ~ '^E2E chromium-mobile-390 worker [0-9]+$'
+    OR display_name ~ '^E2E chromium-narrow-360 worker [0-9]+$'
+    OR display_name = 'E2E isolation proof other worker'
+  );
 UPDATE users SET kind = 'main' WHERE kind IS NULL;
 ALTER TABLE users ALTER COLUMN kind SET DEFAULT 'main';
 ALTER TABLE users ALTER COLUMN kind SET NOT NULL;
