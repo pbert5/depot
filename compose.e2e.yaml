@@ -1,3 +1,9 @@
+networks:
+  default:
+    ipam:
+      config:
+        - subnet: "10.251.0.0/24"
+
 services:
   depot-db:
     volumes:

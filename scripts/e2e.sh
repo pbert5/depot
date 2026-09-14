@@ -23,7 +23,8 @@ compose() {
 }
 
 compose config --quiet
-compose --profile e2e up -d --build --wait --wait-timeout 180 depot-db depot-api depot-web depot-e2e-bootstrap
+compose --profile e2e up -d --build --wait --wait-timeout 180 depot-db depot-api depot-web
+compose --profile e2e run --rm --no-deps depot-e2e-bootstrap
 ./scripts/purge-e2e.sh --apply
 compose --profile e2e run --rm depot-e2e pnpm --dir /app/packages/web exec playwright test
 echo "Isolated Depot E2E passed for Compose project $COMPOSE_PROJECT_NAME"
