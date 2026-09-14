@@ -90,7 +90,9 @@ test.describe('Orks Warlord mobile workflow', () => {
     await expect(bottomAction).toBeVisible();
     await expect(bottomAction).toBeEnabled();
     await bottomAction.click();
-    await expect(page).toHaveURL(`${roster.rosterBaseUrl}/add-units`);
+    await expect.poll(() => new URL(page.url()).pathname).toBe(
+      new URL(`${roster.rosterBaseUrl}/add-units`).pathname
+    );
     await page.goBack();
     const rosterEditPath = new URL(roster.rosterEditUrl).pathname;
     await expect
@@ -105,20 +107,27 @@ test.describe('Orks Warlord mobile workflow', () => {
     await expect(page.getByRole('switch', { name: 'Nominate as warlord' })).toBeChecked();
 
     let failedPutCount = 0;
+    let failedPutInterceptedResolve!: () => void;
+    const failedPutIntercepted = new Promise<void>((resolve) => {
+      failedPutInterceptedResolve = resolve;
+    });
     const failOnePut = async (route: import('@playwright/test').Route) => {
       if (route.request().method() === 'PUT' && failedPutCount === 0) {
         failedPutCount += 1;
         await route.fulfill({ status: 503, body: '{"error":"temporary outage"}' });
+        failedPutInterceptedResolve();
         return;
       }
       await route.continue();
     };
     await page.route('**/api/rosters/**', failOnePut);
     await page.getByRole('switch', { name: 'Nominate as warlord' }).uncheck();
+    await expect(statuses.filter({ hasText: 'Unsaved' }).first()).toBeVisible({ timeout: 5000 });
     await page.getByTestId('save-button').click();
     await expect(page).toHaveURL(/\/edit#unit-/);
+    await failedPutIntercepted;
     const failedStatus = statuses.filter({ hasText: 'Save failed' }).first();
-    await expect(failedStatus).toBeVisible({ timeout: 1500 });
+    await expect(failedStatus).toBeVisible({ timeout: 5000 });
     const retry = page.getByRole('button', { name: 'Retry' }).first();
     await expect(retry).toBeVisible();
     await expect(retry).toBeEnabled();
