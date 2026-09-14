@@ -21,9 +21,31 @@ const ProfileSelector = ({ adapter = profilesApi }: ProfileSelectorProps) => {
   const [createName, setCreateName] = useState('');
   const [renameName, setRenameName] = useState('');
   const [editing, setEditing] = useState(false);
+  const [search, setSearch] = useState('');
+  const [sort, setSort] = useState<'name' | 'created'>('name');
 
   const visibleProfiles = useMemo(() => hideReservedProfiles(profiles), [profiles]);
   const activeProfile = visibleProfiles.find((profile) => profile.id === activeId) ?? null;
+  const counts = useMemo(
+    () => ({
+      main: visibleProfiles.filter((profile) => profile.kind === 'main').length,
+      e2e: visibleProfiles.filter((profile) => profile.kind === 'e2e').length
+    }),
+    [visibleProfiles]
+  );
+  const [activeKind, setActiveKind] = useState<Profile['kind']>('main');
+  const displayedProfiles = useMemo(() => {
+    const normalizedSearch = search.trim().toLocaleLowerCase();
+    return visibleProfiles
+      .filter((profile) => profile.kind === activeKind)
+      .filter((profile) => profile.displayName.toLocaleLowerCase().includes(normalizedSearch))
+      .sort((left, right) => {
+        if (sort === 'created') return left.createdAt.localeCompare(right.createdAt);
+        return left.displayName.localeCompare(right.displayName, undefined, {
+          sensitivity: 'base'
+        });
+      });
+  }, [activeKind, search, sort, visibleProfiles]);
 
   const loadProfiles = async () => {
     setLoading(true);
@@ -68,7 +90,7 @@ const ProfileSelector = ({ adapter = profilesApi }: ProfileSelectorProps) => {
     const name = createName.trim();
     if (!name) return;
     void mutate(
-      () => adapter.create(name),
+      () => adapter.create(name, 'main'),
       () => setCreateName('')
     );
   };
@@ -128,33 +150,93 @@ const ProfileSelector = ({ adapter = profilesApi }: ProfileSelectorProps) => {
               ) : null}
             </div>
 
-            {visibleProfiles.length > 0 ? (
-              <label
-                className="flex flex-col gap-1 text-sm font-medium text-foreground"
-                htmlFor="profile-select"
+            <div className="flex flex-col gap-3">
+              <div
+                className="flex gap-1 border-b border-border-subtle"
+                role="tablist"
+                aria-label="Profile kinds"
               >
-                Switch profile
-                <select
-                  id="profile-select"
-                  className="input-base"
-                  value={activeProfile ? (activeId ?? '') : ''}
-                  disabled={busy}
-                  onChange={(event) => {
-                    const id = event.target.value;
-                    if (id && id !== activeId) void mutate(() => adapter.select(id));
-                  }}
+                {(['main', 'e2e'] as const).map((profileKind) => (
+                  <button
+                    key={profileKind}
+                    type="button"
+                    role="tab"
+                    aria-selected={activeKind === profileKind}
+                    className={`border-b-2 px-3 py-2 text-sm font-bold capitalize ${
+                      activeKind === profileKind
+                        ? 'border-accent-600 text-foreground dark:border-accent-500'
+                        : 'border-transparent text-subtle'
+                    }`}
+                    onClick={() => setActiveKind(profileKind)}
+                  >
+                    {profileKind === 'main' ? 'Main' : 'E2E'} ({counts[profileKind]})
+                  </button>
+                ))}
+              </div>
+
+              <div className="flex flex-col gap-2 sm:flex-row">
+                <label
+                  className="min-w-0 flex-1 text-sm font-medium text-foreground"
+                  htmlFor="profile-search"
                 >
-                  {!activeProfile ? <option value="">Select a profile</option> : null}
-                  {visibleProfiles.map((profile) => (
-                    <option key={profile.id} value={profile.id}>
-                      {profile.displayName}
-                    </option>
+                  <span className="sr-only">Search profiles</span>
+                  <input
+                    id="profile-search"
+                    className="input-base"
+                    type="search"
+                    placeholder="Search profiles"
+                    aria-label="Search profiles"
+                    value={search}
+                    onChange={(event) => setSearch(event.target.value)}
+                  />
+                </label>
+                <label
+                  className="flex items-center gap-2 text-sm font-medium text-foreground"
+                  htmlFor="profile-sort"
+                >
+                  Sort by
+                  <select
+                    id="profile-sort"
+                    className="input-base"
+                    aria-label="Sort profiles"
+                    value={sort}
+                    onChange={(event) => setSort(event.target.value as 'name' | 'created')}
+                  >
+                    <option value="name">Name</option>
+                    <option value="created">Created</option>
+                  </select>
+                </label>
+              </div>
+
+              {displayedProfiles.length > 0 ? (
+                <div
+                  className="flex max-h-56 flex-col gap-1 overflow-y-auto"
+                  aria-label={`${activeKind} profiles`}
+                >
+                  {displayedProfiles.map((profile) => (
+                    <button
+                      key={profile.id}
+                      type="button"
+                      className="flex items-center gap-3 rounded-sm border border-transparent px-3 py-2 text-left text-sm text-body hover:border-border-subtle hover:bg-surface-soft focus-ring-primary"
+                      aria-pressed={profile.id === activeId}
+                      disabled={busy}
+                      onClick={() => {
+                        if (profile.id !== activeId) void mutate(() => adapter.select(profile.id));
+                      }}
+                    >
+                      <span className="min-w-0 flex-1 truncate font-medium">
+                        {profile.displayName}
+                      </span>
+                      {profile.id === activeId ? (
+                        <span className="text-xs font-bold text-accent">Active</span>
+                      ) : null}
+                    </button>
                   ))}
-                </select>
-              </label>
-            ) : (
-              <p className="text-sm text-subtle">No profiles are available yet.</p>
-            )}
+                </div>
+              ) : (
+                <p className="text-sm text-subtle">No profiles are available yet.</p>
+              )}
+            </div>
 
             {editing ? (
               <form
