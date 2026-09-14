@@ -3,8 +3,18 @@ import { describe, expect, it, vi } from 'vitest';
 import ProfileSelector from './profile-selector';
 import type { Profile, ProfilesAdapter } from '@/data/profiles';
 
-const one: Profile = { id: 'one', displayName: 'Ash', createdAt: '2026-01-01T00:00:00Z' };
-const two: Profile = { id: 'two', displayName: 'League night', createdAt: '2026-01-02T00:00:00Z' };
+const one: Profile = {
+  id: 'one',
+  displayName: 'Ash',
+  createdAt: '2026-01-01T00:00:00Z',
+  kind: 'main'
+};
+const two: Profile = {
+  id: 'two',
+  displayName: 'League night',
+  createdAt: '2026-01-02T00:00:00Z',
+  kind: 'main'
+};
 
 const adapter = (overrides: Partial<ProfilesAdapter> = {}): ProfilesAdapter => ({
   list: vi.fn().mockResolvedValue({ profiles: [one, two], active: one, activeProfileId: one.id }),

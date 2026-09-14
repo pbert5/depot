@@ -17,12 +17,14 @@ const ProfileState = () => {
 const local: Profile = {
   id: LOCAL_PROFILE_ID,
   displayName: 'Local',
-  createdAt: '2026-01-01T00:00:00Z'
+  createdAt: '2026-01-01T00:00:00Z',
+  kind: 'main'
 };
 const two: Profile = {
   id: 'profile-two',
   displayName: 'League night',
-  createdAt: '2026-01-02T00:00:00Z'
+  createdAt: '2026-01-02T00:00:00Z',
+  kind: 'main'
 };
 
 describe('ProfileProvider', () => {
