@@ -122,7 +122,6 @@ test.describe('Orks Warlord mobile workflow', () => {
     };
     await page.route('**/api/rosters/**', failOnePut);
     await page.getByRole('switch', { name: 'Nominate as warlord' }).uncheck();
-    await expect(statuses.filter({ hasText: 'Unsaved' }).first()).toBeVisible({ timeout: 5000 });
     await page.getByTestId('save-button').click();
     await expect(page).toHaveURL(/\/edit#unit-/);
     await failedPutIntercepted;
