@@ -53,7 +53,7 @@ export const remapRosterIds = (roster: Roster): Roster => {
       id: unitIds.get(unit.id)!,
       attachedToUnitId: unit.attachedToUnitId
         ? (unitIds.get(unit.attachedToUnitId) ?? null)
-        : unit.attachedToUnitId ?? null
+        : (unit.attachedToUnitId ?? null)
     })),
     // Drop enhancements whose unit is missing — imports are untrusted files.
     enhancements: roster.enhancements.flatMap((entry) => {

@@ -140,7 +140,8 @@ export interface Datasheet {
 }
 
 /** Grouping bucket for a datasheet; derived from its keywords. */
-export type BattlefieldRole = 'epic-hero' | 'character' | 'battleline' | 'dedicated-transport' | 'other';
+export type BattlefieldRole =
+  'epic-hero' | 'character' | 'battleline' | 'dedicated-transport' | 'other';
 
 export interface DatasheetSummary {
   id: string;

@@ -19,28 +19,45 @@ describe('search', () => {
   });
 
   it('prioritizes exact and prefix matches before token and substring matches', () => {
-    expect(searchItems(units, 'boyz').map((unit) => unit.name)).toEqual(['Boyz', 'Beast Snagga Boyz']);
+    expect(searchItems(units, 'boyz').map((unit) => unit.name)).toEqual([
+      'Boyz',
+      'Beast Snagga Boyz'
+    ]);
     expect(searchItems(units, 'deff dredd')[0].name).toBe('Deff Dread');
-    expect(searchItems(units, 'gork')).toEqual([{ name: 'Gorkanaut', faction: 'Orks', role: 'Transport' }]);
+    expect(searchItems(units, 'gork')).toEqual([
+      { name: 'Gorkanaut', faction: 'Orks', role: 'Transport' }
+    ]);
   });
 
   it('matches metadata after the primary name and supports safe plural forms', () => {
-    expect(searchItems(units, 'battleline', { getMetadata: (unit) => ({ role: unit.role }) }).map((unit) => unit.name)).toEqual([
-      'Beast Snagga Boyz',
-      'Boyz'
-    ]);
+    expect(
+      searchItems(units, 'battleline', { getMetadata: (unit) => ({ role: unit.role }) }).map(
+        (unit) => unit.name
+      )
+    ).toEqual(['Beast Snagga Boyz', 'Boyz']);
     expect(searchItems(units, 'meganob').map((unit) => unit.name)).toEqual(['Meganobz']);
   });
 
   it('uses controlled fuzzy fallback and deterministic tie breaks', () => {
     expect(searchItems(units, 'truk').map((unit) => unit.name)).toEqual(['Trukk']);
-    expect(searchItems(units, 'ork', { getMetadata: (unit) => ({ faction: unit.faction }) }).map((unit) => unit.name)).toEqual(
-      ['Gorkanaut', 'Battlewagon', 'Beast Snagga Boyz', 'Boyz', 'Deff Dread', 'Meganobz', 'Trukk', 'Warboss']
-    );
-    expect(rankSearch(units, 'transport', { getMetadata: (unit) => ({ role: unit.role }) }).map((result) => result.item.name)).toEqual([
-      'Battlewagon',
+    expect(
+      searchItems(units, 'ork', { getMetadata: (unit) => ({ faction: unit.faction }) }).map(
+        (unit) => unit.name
+      )
+    ).toEqual([
       'Gorkanaut',
-      'Trukk'
+      'Battlewagon',
+      'Beast Snagga Boyz',
+      'Boyz',
+      'Deff Dread',
+      'Meganobz',
+      'Trukk',
+      'Warboss'
     ]);
+    expect(
+      rankSearch(units, 'transport', { getMetadata: (unit) => ({ role: unit.role }) }).map(
+        (result) => result.item.name
+      )
+    ).toEqual(['Battlewagon', 'Gorkanaut', 'Trukk']);
   });
 });

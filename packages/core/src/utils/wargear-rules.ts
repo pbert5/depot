@@ -125,9 +125,7 @@ export interface EquipmentInput {
 }
 
 export interface EquipmentTransition extends EquipmentInput {
-  action:
-    | { choiceId: string; delta: 1 | -1 }
-    | { modelSize: number };
+  action: { choiceId: string; delta: 1 | -1 } | { modelSize: number };
 }
 
 const clean = (value: string) => value.replace(/\s+/g, ' ').trim();
@@ -323,7 +321,9 @@ export function parseWargearRules(loadout: string, wargear: Wargear[]): ParsedWa
   return { rules, diagnostics };
 }
 
-const asRules = (rules: EquipmentInput['rules']): { rules: WargearRule[]; diagnostics: WargearRuleDiagnostic[] } =>
+const asRules = (
+  rules: EquipmentInput['rules']
+): { rules: WargearRule[]; diagnostics: WargearRuleDiagnostic[] } =>
   Array.isArray(rules) ? { rules, diagnostics: [] } : (rules ?? { rules: [], diagnostics: [] });
 
 const countsFrom = (selection: EquipmentInput['selection']): Record<string, number> => {
@@ -341,7 +341,9 @@ const total = (counts: Record<string, number>, choices: WargearChoice[]) =>
 const applies = (rule: WargearRule, input: EquipmentInput, modelSize: number) => {
   const scope = rule.scope;
   return (
-    (!scope?.modelName || !input.modelName || scope.modelName.toLocaleLowerCase() === input.modelName.toLocaleLowerCase()) &&
+    (!scope?.modelName ||
+      !input.modelName ||
+      scope.modelName.toLocaleLowerCase() === input.modelName.toLocaleLowerCase()) &&
     (!scope?.unitSize || scope.unitSize === modelSize) &&
     (!scope?.everyModels || modelSize >= scope.everyModels)
   );
@@ -368,41 +370,87 @@ const evaluateCounts = (
   }));
 
   for (const [id, count] of Object.entries(counts)) {
-    if (!available.has(id)) issues.push(issue('unknown-choice', `Wargear “${id}” is not available.`));
-    if (!Number.isInteger(count) || count < 0) issues.push(issue('invalid-count', `Count for “${id}” must be a non-negative integer.`));
+    if (!available.has(id))
+      issues.push(issue('unknown-choice', `Wargear “${id}” is not available.`));
+    if (!Number.isInteger(count) || count < 0)
+      issues.push(issue('invalid-count', `Count for “${id}” must be a non-negative integer.`));
   }
 
   const rules = parsed.rules.filter((rule) => applies(rule, input, modelSize));
   const quantities = new Map<string, number>();
   for (const rule of rules) {
     if (rule.kind === 'quantity') {
-      const capacity = rule.max === undefined ? Math.floor(modelSize / (rule.scope?.everyModels ?? 1)) :
-        rule.max * (rule.scope?.everyModels ? Math.floor(modelSize / rule.scope.everyModels) : 1);
+      const capacity =
+        rule.max === undefined
+          ? Math.floor(modelSize / (rule.scope?.everyModels ?? 1))
+          : rule.max *
+            (rule.scope?.everyModels ? Math.floor(modelSize / rule.scope.everyModels) : 1);
       const current = total(counts, rule.choices);
-      for (const choice of rule.choices) quantities.set(choice.id, Math.min(quantities.get(choice.id) ?? Infinity, capacity));
+      for (const choice of rule.choices)
+        quantities.set(choice.id, Math.min(quantities.get(choice.id) ?? Infinity, capacity));
       if (rule.min !== undefined && current < rule.min)
-        issues.push(issue('below-minimum', `At least ${rule.min} of ${names(rule.choices)} must be selected.`, rule));
+        issues.push(
+          issue(
+            'below-minimum',
+            `At least ${rule.min} of ${names(rule.choices)} must be selected.`,
+            rule
+          )
+        );
       if (current > capacity)
-        issues.push(issue('above-capacity', `At most ${capacity} of ${names(rule.choices)} may be selected.`, rule));
+        issues.push(
+          issue(
+            'above-capacity',
+            `At most ${capacity} of ${names(rule.choices)} may be selected.`,
+            rule
+          )
+        );
     } else if (rule.kind === 'replacement') {
       const current = total(counts, [...rule.from, ...rule.to]);
       const capacity = rule.max ?? 1;
-      for (const choice of [...rule.from, ...rule.to]) quantities.set(choice.id, Math.min(quantities.get(choice.id) ?? Infinity, capacity));
+      for (const choice of [...rule.from, ...rule.to])
+        quantities.set(choice.id, Math.min(quantities.get(choice.id) ?? Infinity, capacity));
       if (current > capacity)
-        issues.push(issue('replacement', `Only ${capacity} replacement${capacity === 1 ? '' : 's'} may be applied.`, rule));
+        issues.push(
+          issue(
+            'replacement',
+            `Only ${capacity} replacement${capacity === 1 ? '' : 's'} may be applied.`,
+            rule
+          )
+        );
     } else if (rule.kind === 'choice-group') {
       const current = total(counts, rule.choices);
-      for (const choice of rule.choices) quantities.set(choice.id, Math.min(quantities.get(choice.id) ?? Infinity, 1));
+      for (const choice of rule.choices)
+        quantities.set(choice.id, Math.min(quantities.get(choice.id) ?? Infinity, 1));
       if (current !== rule.choose)
-        issues.push(issue('choice-count', `Choose exactly ${rule.choose} of ${names(rule.choices)}.`, rule));
-    } else if (rule.kind === 'prerequisite' && total(counts, rule.choices) > 0 && total(counts, rule.requires) === 0) {
-      issues.push(issue('prerequisite', `${names(rule.choices)} requires ${names(rule.requires)}.`, rule));
-    } else if (rule.kind === 'conflict' && total(counts, rule.choices) > 0 && total(counts, rule.conflictsWith) > 0) {
-      issues.push(issue('conflict', `${names(rule.choices)} cannot be combined with ${names(rule.conflictsWith)}.`, rule));
+        issues.push(
+          issue('choice-count', `Choose exactly ${rule.choose} of ${names(rule.choices)}.`, rule)
+        );
+    } else if (
+      rule.kind === 'prerequisite' &&
+      total(counts, rule.choices) > 0 &&
+      total(counts, rule.requires) === 0
+    ) {
+      issues.push(
+        issue('prerequisite', `${names(rule.choices)} requires ${names(rule.requires)}.`, rule)
+      );
+    } else if (
+      rule.kind === 'conflict' &&
+      total(counts, rule.choices) > 0 &&
+      total(counts, rule.conflictsWith) > 0
+    ) {
+      issues.push(
+        issue(
+          'conflict',
+          `${names(rule.choices)} cannot be combined with ${names(rule.conflictsWith)}.`,
+          rule
+        )
+      );
     }
   }
 
-  const appliedChoices = input.wargear.filter((item) => (counts[item.id] ?? 0) > 0).map((item) => ({ id: item.id, name: item.name }));
+  const appliedChoices = input.wargear
+    .filter((item) => (counts[item.id] ?? 0) > 0)
+    .map((item) => ({ id: item.id, name: item.name }));
   const actions: Record<string, EquipmentActionState> = {};
   if (includeActions) {
     for (const item of input.wargear) {
@@ -410,13 +458,26 @@ const evaluateCounts = (
       const capacity = structured ? (quantities.get(item.id) ?? 0) : 1;
       const test = (delta: 1 | -1) => {
         const candidate = { ...counts, [item.id]: Math.max(0, current + delta) };
-        const result = evaluateCounts({ ...input, selection: candidate }, candidate, modelSize, false);
+        const result = evaluateCounts(
+          { ...input, selection: candidate },
+          candidate,
+          modelSize,
+          false
+        );
         return result.issues[0];
       };
-      const upIssue = current >= capacity ? issue('above-capacity', structured ? 'This choice is at capacity.' : 'Legacy wargear is already selected.') : test(1);
-      const downIssue = current <= 0 ? issue('invalid-count', 'This choice is not selected.') : test(-1);
+      const upIssue =
+        current >= capacity
+          ? issue(
+              'above-capacity',
+              structured ? 'This choice is at capacity.' : 'Legacy wargear is already selected.'
+            )
+          : test(1);
+      const downIssue =
+        current <= 0 ? issue('invalid-count', 'This choice is not selected.') : test(-1);
       actions[item.id] = {
-        current, capacity,
+        current,
+        capacity,
         canIncrement: !upIssue,
         canDecrement: !downIssue,
         ...(upIssue && { reasonCode: upIssue.code, reason: upIssue.message })
@@ -433,16 +494,42 @@ export function evaluateEquipment(input: EquipmentInput): EquipmentEvaluation {
 }
 
 /** Applies one equipment or model-size action only when the resulting state is legal. */
-export function transitionEquipment(input: EquipmentTransition): EquipmentEvaluation & { accepted: boolean } {
+export function transitionEquipment(
+  input: EquipmentTransition
+): EquipmentEvaluation & { accepted: boolean } {
   const before = evaluateEquipment(input);
   let nextSize = before.modelSize;
   let nextCounts = { ...before.counts };
   if ('modelSize' in input.action) nextSize = input.action.modelSize;
-  else nextCounts[input.action.choiceId] = Math.max(0, (nextCounts[input.action.choiceId] ?? 0) + input.action.delta);
+  else
+    nextCounts[input.action.choiceId] = Math.max(
+      0,
+      (nextCounts[input.action.choiceId] ?? 0) + input.action.delta
+    );
   if (!Number.isInteger(nextSize) || nextSize < 1) {
-    return { ...before, accepted: false, issues: [...before.issues, issue('invalid-model-size', 'Model size must be a positive integer.')] };
+    return {
+      ...before,
+      accepted: false,
+      issues: [
+        ...before.issues,
+        issue('invalid-model-size', 'Model size must be a positive integer.')
+      ]
+    };
   }
-  const after = evaluateCounts({ ...input, selection: nextCounts, modelSize: nextSize }, nextCounts, nextSize, true);
-  if (after.issues.length > 0) return { ...before, accepted: false, issues: [...after.issues, issue('invalid-model-size', 'This transition would leave the unit with invalid equipment.')] };
+  const after = evaluateCounts(
+    { ...input, selection: nextCounts, modelSize: nextSize },
+    nextCounts,
+    nextSize,
+    true
+  );
+  if (after.issues.length > 0)
+    return {
+      ...before,
+      accepted: false,
+      issues: [
+        ...after.issues,
+        issue('invalid-model-size', 'This transition would leave the unit with invalid equipment.')
+      ]
+    };
   return { ...after, accepted: true };
 }

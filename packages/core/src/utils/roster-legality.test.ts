@@ -486,13 +486,24 @@ describe('validateRoster', () => {
 
   it('validates explicit support attachments instead of silently pairing them', () => {
     const bodyguard = unit(datasheet({ id: 'boyz', name: 'Boyz' }));
-    const supportSheet = datasheet({ id: 'painboy', name: 'Painboy', isSupport: true, leaders: [{ id: 'boyz', slug: 'boyz' }] });
+    const supportSheet = datasheet({
+      id: 'painboy',
+      name: 'Painboy',
+      isSupport: true,
+      leaders: [{ id: 'boyz', slug: 'boyz' }]
+    });
     const support = unit(supportSheet);
     support.attachedToUnitId = bodyguard.id;
 
-    expect(validateRoster(roster({ units: [bodyguard, support] })).filter((issue) => issue.code === 'support')).toEqual([]);
+    expect(
+      validateRoster(roster({ units: [bodyguard, support] })).filter(
+        (issue) => issue.code === 'support'
+      )
+    ).toEqual([]);
 
     support.attachedToUnitId = 'missing';
-    expect(validateRoster(roster({ units: [bodyguard, support] })).map((issue) => issue.code)).toContain('attachment');
+    expect(
+      validateRoster(roster({ units: [bodyguard, support] })).map((issue) => issue.code)
+    ).toContain('attachment');
   });
 });

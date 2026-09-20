@@ -93,7 +93,10 @@ export const buildFactionDetachments = ({
             const linked = datasheetEnhancements
               .filter((entry) => entry.enhancementId === enhancement.id)
               .map((entry) => entry.datasheetId);
-            return { ...toDepotEnhancement(enhancement), ...(linked.length ? { datasheetIds: linked } : {}) };
+            return {
+              ...toDepotEnhancement(enhancement),
+              ...(linked.length ? { datasheetIds: linked } : {})
+            };
           })
       ),
       stratagems: sortByName(

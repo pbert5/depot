@@ -255,7 +255,10 @@ describe('roster utils', () => {
 
   it('remaps explicit leader attachments when duplicating a roster', () => {
     const roster = createRoster({
-      units: [createRosterUnit({ id: 'bodyguard' }), createRosterUnit({ id: 'leader', attachedToUnitId: 'bodyguard' })]
+      units: [
+        createRosterUnit({ id: 'bodyguard' }),
+        createRosterUnit({ id: 'leader', attachedToUnitId: 'bodyguard' })
+      ]
     });
     expect(roster.units[1].attachedToUnitId).toBe('bodyguard');
     const duplicated = remapRosterIds(roster);
@@ -270,7 +273,9 @@ describe('roster utils', () => {
     const roster = createRoster({ units: [leader, bodyguard] });
 
     expect(getUnitAttachmentEligibility(roster, 'leader', 'leader').code).toBe('self');
-    expect(getUnitAttachmentEligibility(roster, 'leader', 'missing').code).toBe('bodyguard-missing');
+    expect(getUnitAttachmentEligibility(roster, 'leader', 'missing').code).toBe(
+      'bodyguard-missing'
+    );
     expect(getUnitAttachmentEligibility(roster, 'leader', 'bodyguard').eligible).toBe(false);
   });
 

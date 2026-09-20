@@ -102,7 +102,12 @@ const createWargear = (overrides: Partial<Wargear> = {}): Wargear => ({
 
 describe('parseLoadoutWargear', () => {
   const boltPistol = createWargear();
-  const chainsword = createWargear({ id: 'ds-1:chainsword', line: '2', name: 'Chainsword', type: 'Melee' });
+  const chainsword = createWargear({
+    id: 'ds-1:chainsword',
+    line: '2',
+    name: 'Chainsword',
+    type: 'Melee'
+  });
   const wargear = [boltPistol, chainsword];
 
   it.each([

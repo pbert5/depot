@@ -18,6 +18,7 @@ import { groupBy } from '@depot/core/utils/common';
 import CollectionSelectionCard from './_components/collection-selection-card';
 import { useSettingsContext } from '@/contexts/settings/context';
 import CreateRosterSheet from '@/routes/rosters/_components/create-roster-sheet';
+import useCollectionUnitSelection from '@/hooks/use-collection-unit-selection';
 
 type CollectionDatasheetListItem = depot.Datasheet & {
   collectionUnitId: string;
@@ -29,20 +30,9 @@ const CollectionNewRoster: React.FC = () => {
   const navigate = useNavigate();
   const { settings } = useSettingsContext();
   const { collection, loading, error } = useCollection(collectionId);
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const { selectedIds, selectedCount, toggle, clear, prune } = useCollectionUnitSelection();
   const [isSummaryOpen, setIsSummaryOpen] = useState(false);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
-
-  // Keep selected units across search/category transitions. Only discard an
-  // id when the backing collection itself changes and no longer contains it.
-  useEffect(() => {
-    if (!collection) return;
-    const availableIds = new Set(collection.items.map((item) => item.id));
-    setSelectedIds((previous) => {
-      const next = new Set([...previous].filter((id) => availableIds.has(id)));
-      return next.size === previous.size ? previous : next;
-    });
-  }, [collection]);
 
   const pageTitle = collection
     ? `${collection.name} - Build Roster`
@@ -50,10 +40,14 @@ const CollectionNewRoster: React.FC = () => {
   useDocumentTitle(pageTitle);
 
   useEffect(() => {
-    if (selectedIds.size === 0) {
+    if (selectedCount === 0) {
       setIsSummaryOpen(false);
     }
-  }, [selectedIds.size]);
+  }, [selectedCount]);
+
+  useEffect(() => {
+    prune(collection?.items.map((item) => item.id) ?? []);
+  }, [collection, prune]);
 
   const collectionDatasheets = useMemo<CollectionDatasheetListItem[]>(() => {
     if (!collection) return [];
@@ -99,7 +93,6 @@ const CollectionNewRoster: React.FC = () => {
   );
 
   const points = collection ? calculateCollectionPoints(collection) : 0;
-  const selectedCount = selectedIds.size;
   const hasSelections = selectedCount > 0;
 
   const datasheetFilters = useMemo(
@@ -110,29 +103,21 @@ const CollectionNewRoster: React.FC = () => {
     [settings.showLegends, settings.showForgeWorld]
   );
 
-  const toggleSelect = (id: string) =>
-    setSelectedIds((prev) => {
-      const next = new Set(prev);
-      if (!next.delete(id)) next.add(id);
-      return next;
-    });
-
-  const adjust = (datasheet: depot.Datasheet, modelCost: depot.ModelCost, delta: 1 | -1) =>
-    setSelectedIds((prev) => {
-      const candidates = (collection?.items ?? []).filter(
-        (item) =>
-          prev.has(item.id) === delta < 0 &&
-          item.datasheet.id === datasheet.id &&
-          item.modelCost.line === modelCost.line &&
-          item.modelCost.description === modelCost.description
-      );
-      const target = delta > 0 ? candidates[0] : candidates.at(-1);
-      if (!target) return prev;
-      const next = new Set(prev);
-      if (delta > 0) next.add(target.id);
-      else next.delete(target.id);
-      return next;
-    });
+  const adjustSelection = (
+    datasheet: depot.Datasheet,
+    modelCost: depot.ModelCost,
+    delta: 1 | -1
+  ) => {
+    const candidates = (collection?.items ?? []).filter(
+      (item) =>
+        selectedIds.has(item.id) === delta < 0 &&
+        item.datasheet.id === datasheet.id &&
+        item.modelCost.line === modelCost.line &&
+        item.modelCost.description === modelCost.description
+    );
+    const target = delta > 0 ? candidates[0] : candidates.at(-1);
+    if (target) toggle(target.id);
+  };
 
   const handleCreateRoster = () => {
     if (!collection || selectedRosterUnits.length === 0) return;
@@ -196,7 +181,7 @@ const CollectionNewRoster: React.FC = () => {
                 <CollectionSelectionCard
                   unit={datasheet.unit}
                   selected={selectedIds.has(datasheet.collectionUnitId)}
-                  onToggle={toggleSelect}
+                  onToggle={toggle}
                 />
               )}
             />
@@ -205,10 +190,10 @@ const CollectionNewRoster: React.FC = () => {
               groups={aggregatedSelection}
               selectedUnitsCount={selectedUnits.length}
               totalPoints={totalSelectedPoints}
-              onClear={() => setSelectedIds(new Set())}
+              onClear={clear}
               onConfirm={handleCreateRoster}
-              onIncrement={(datasheet, modelCost) => adjust(datasheet, modelCost, 1)}
-              onDecrement={(datasheet, modelCost) => adjust(datasheet, modelCost, -1)}
+              onIncrement={(datasheet, modelCost) => adjustSelection(datasheet, modelCost, 1)}
+              onDecrement={(datasheet, modelCost) => adjustSelection(datasheet, modelCost, -1)}
               isOpen={isSummaryOpen}
               onOpenChange={setIsSummaryOpen}
             />

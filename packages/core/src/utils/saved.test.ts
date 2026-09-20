@@ -104,7 +104,10 @@ describe('toStoredRoster', () => {
   it('persists an explicit attachment target', () => {
     const stored = toStoredRoster({
       ...roster,
-      units: [{ ...unit, attachedToUnitId: 'bodyguard' }, { ...unit, id: 'bodyguard' }]
+      units: [
+        { ...unit, attachedToUnitId: 'bodyguard' },
+        { ...unit, id: 'bodyguard' }
+      ]
     });
     expect(stored.units[0].attachedToUnitId).toBe('bodyguard');
   });

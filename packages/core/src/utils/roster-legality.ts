@@ -320,7 +320,9 @@ export const validateRoster = (roster: Roster): RosterIssue[] => {
     }
   }
 
-  for (const support of unmatchedSupportUnits(units.filter((unit) => unit.attachedToUnitId == null))) {
+  for (const support of unmatchedSupportUnits(
+    units.filter((unit) => unit.attachedToUnitId == null)
+  )) {
     issues.push({
       code: 'support',
       unitId: support.id,

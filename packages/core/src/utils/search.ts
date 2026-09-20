@@ -36,7 +36,8 @@ const pluralForms = (token: string): string[] => {
   const forms = new Set([token]);
   if (token.length > 3 && token.endsWith('ies')) forms.add(`${token.slice(0, -3)}y`);
   if (token.length > 4 && token.endsWith('es')) forms.add(token.slice(0, -2));
-  if (token.length > 3 && token.endsWith('s') && !token.endsWith('ss')) forms.add(token.slice(0, -1));
+  if (token.length > 3 && token.endsWith('s') && !token.endsWith('ss'))
+    forms.add(token.slice(0, -1));
   return [...forms];
 };
 
@@ -61,7 +62,8 @@ const metadataText = (metadata: Record<string, unknown> | undefined): string[] =
   if (!metadata) return [];
   const values: string[] = [];
   const visit = (value: unknown): void => {
-    if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') values.push(String(value));
+    if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean')
+      values.push(String(value));
     else if (Array.isArray(value)) value.forEach(visit);
   };
   Object.values(metadata).forEach(visit);
@@ -86,7 +88,9 @@ const fieldScore = (query: string, field: string, allowFuzzy: boolean): number =
     else if (prefix) score += 680;
     else if (normalized.includes(queryToken)) score += 560;
     else if (allowFuzzy) {
-      const distance = Math.min(...fieldTokens.map((fieldToken) => editDistance(queryToken, fieldToken)));
+      const distance = Math.min(
+        ...fieldTokens.map((fieldToken) => editDistance(queryToken, fieldToken))
+      );
       const threshold = queryToken.length <= 5 ? 1 : 2;
       if (distance <= threshold) score += 300 - distance * 40;
     }
@@ -96,12 +100,17 @@ const fieldScore = (query: string, field: string, allowFuzzy: boolean): number =
 
 const defaultText = <T>(item: T): string => {
   if (typeof item === 'string') return item;
-  if (item && typeof item === 'object' && 'name' in item && typeof item.name === 'string') return item.name;
+  if (item && typeof item === 'object' && 'name' in item && typeof item.name === 'string')
+    return item.name;
   return String(item);
 };
 
 /** Rank items without imposing any domain or faction-specific knowledge. */
-export const rankSearch = <T>(items: readonly T[], query: string, options: SearchOptions<T> = {}): SearchResult<T>[] => {
+export const rankSearch = <T>(
+  items: readonly T[],
+  query: string,
+  options: SearchOptions<T> = {}
+): SearchResult<T>[] => {
   const normalizedQuery = normalizeSearchText(query);
   if (!normalizedQuery) return items.map((item) => ({ item, score: 0 }));
 
@@ -113,21 +122,33 @@ export const rankSearch = <T>(items: readonly T[], query: string, options: Searc
     const fields = [primary, ...metadata];
     const direct = fields.some((field) => fieldScore(normalizedQuery, field, false) > 0);
     const score = fields.reduce(
-      (sum, field, fieldIndex) => sum + fieldScore(normalizedQuery, field, !direct) * (fieldIndex === 0 ? 1 : METADATA_WEIGHT),
+      (sum, field, fieldIndex) =>
+        sum +
+        fieldScore(normalizedQuery, field, !direct) * (fieldIndex === 0 ? 1 : METADATA_WEIGHT),
       0
     );
     const matchedTokens = queryTokens.every((token) =>
-      fields.some((field) => fieldScore(token, field, false) > 0 || fieldScore(token, field, true) > 0)
+      fields.some(
+        (field) => fieldScore(token, field, false) > 0 || fieldScore(token, field, true) > 0
+      )
     );
     if (score === 0 || (!matchedTokens && !direct)) return [];
-    return [{ item, score, index, key: normalizeSearchText(options.getKey?.(item, index) ?? primary) }];
+    return [
+      { item, score, index, key: normalizeSearchText(options.getKey?.(item, index) ?? primary) }
+    ];
   });
 
-  ranked.sort((left, right) => right.score - left.score || left.key.localeCompare(right.key) || left.index - right.index);
+  ranked.sort(
+    (left, right) =>
+      right.score - left.score || left.key.localeCompare(right.key) || left.index - right.index
+  );
   const limit = options.limit === undefined ? ranked.length : Math.max(0, options.limit);
   return ranked.slice(0, limit).map(({ item, score }) => ({ item, score }));
 };
 
 /** Convenience form for callers that only need the ordered items. */
-export const searchItems = <T>(items: readonly T[], query: string, options: SearchOptions<T> = {}): T[] =>
-  rankSearch(items, query, options).map(({ item }) => item);
+export const searchItems = <T>(
+  items: readonly T[],
+  query: string,
+  options: SearchOptions<T> = {}
+): T[] => rankSearch(items, query, options).map(({ item }) => item);
