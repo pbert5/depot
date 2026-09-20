@@ -133,6 +133,7 @@ const readClientState = (page: Page) =>
 const installApi = async (page: Page, options: { failFirstPut?: boolean } = {}) => {
   const remote: StoredDocuments = { rosters: [], collections: [] };
   const puts: { path: string; body: unknown }[] = [];
+  const putResults: { path: string; status: number }[] = [];
   let failedFirstPut = false;
 
   await page.route('**/api/**', async (route: Route) => {
@@ -162,6 +163,7 @@ const installApi = async (page: Page, options: { failFirstPut?: boolean } = {}) 
       puts.push({ path: url.pathname, body });
       if (options.failFirstPut && !failedFirstPut) {
         failedFirstPut = true;
+        putResults.push({ path: url.pathname, status: 503 });
         await route.fulfill({
           status: 503,
           contentType: 'application/json',
@@ -170,6 +172,7 @@ const installApi = async (page: Page, options: { failFirstPut?: boolean } = {}) 
         return;
       }
       remote[kind] = [...remote[kind].filter((item) => item.id !== id), body] as never;
+      putResults.push({ path: url.pathname, status: 200 });
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -181,7 +184,7 @@ const installApi = async (page: Page, options: { failFirstPut?: boolean } = {}) 
     await route.fulfill({ status: 405, body: '{}' });
   });
 
-  return { remote, puts };
+  return { remote, puts, putResults };
 };
 
 const prepareSeededPage = async (page: Page) => {
@@ -195,7 +198,7 @@ const prepareSeededPage = async (page: Page) => {
   await page.unroute('**/');
   await deleteDatabase(page);
   await seedV11(page);
-  await page.reload();
+  await page.goto('/rosters');
 };
 
 test.describe('IndexedDB server migration', () => {
@@ -205,7 +208,6 @@ test.describe('IndexedDB server migration', () => {
       const api = await installApi(page);
       await prepareSeededPage(page);
 
-      await page.goto('/rosters');
       await expect.poll(() => api.puts.length).toBe(2);
       await page.reload();
       await expect(page.getByTestId('roster-card')).toContainText(roster.name);
@@ -244,11 +246,14 @@ test.describe('IndexedDB server migration', () => {
       const api = await installApi(page, { failFirstPut: true });
       await prepareSeededPage(page);
 
-      await page.goto('/rosters');
       await expect(page.getByTestId('empty-rosters')).toBeVisible();
       // The migration retries each legacy document independently: the first
       // roster PUT fails, but the collection PUT is still attempted safely.
       await expect.poll(() => api.puts.length).toBe(2);
+      expect(api.putResults).toEqual([
+        { path: `/api/rosters/${roster.id}`, status: 503 },
+        { path: `/api/collections/${collection.id}`, status: 200 }
+      ]);
       const failedState = await readClientState(page);
       expect(failedState.version).toBe(CURRENT_DB_VERSION);
       expect(failedState.roster).toEqual(roster);
@@ -258,6 +263,11 @@ test.describe('IndexedDB server migration', () => {
 
       await page.reload();
       await expect.poll(() => api.puts.length).toBe(3);
+      expect(api.putResults).toEqual([
+        { path: `/api/rosters/${roster.id}`, status: 503 },
+        { path: `/api/collections/${collection.id}`, status: 200 },
+        { path: `/api/rosters/${roster.id}`, status: 200 }
+      ]);
       await page.reload();
       await expect(page.getByTestId('roster-card')).toContainText(roster.name);
       await page.goto('/collections');

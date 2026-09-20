@@ -7,6 +7,7 @@ import type { RosterAction, RosterContextValue, RosterSaveState } from './types'
 import { rosterReducer } from './reducer';
 import { initialState } from './constants';
 import { createId } from '@/utils/id';
+import RosterSaveStatus from '@/components/shared/roster/roster-save-status';
 
 export const RosterContext = createContext<RosterContextValue | undefined>(undefined);
 
@@ -219,6 +220,8 @@ export const RosterProvider: FC<RosterProviderProps> = ({ children, rosterId }) 
         }),
       updateUnitModelCost: (rosterUnitId, modelCost) =>
         stageRosterChange({ type: 'UPDATE_UNIT_MODEL_COST', payload: { rosterUnitId, modelCost } }),
+      setUnitAttachment: (leaderUnitId, bodyguardUnitId) =>
+        stageRosterChange({ type: 'SET_UNIT_ATTACHMENT', payload: { leaderUnitId, bodyguardUnitId } }),
       applyEnhancement: (enhancement, targetUnitId) =>
         stageRosterChange({ type: 'APPLY_ENHANCEMENT', payload: { enhancement, targetUnitId } }),
       removeEnhancement: (enhancementId) =>
@@ -227,34 +230,10 @@ export const RosterProvider: FC<RosterProviderProps> = ({ children, rosterId }) 
     };
   }, []);
 
-  const saveLabel = {
-    saved: 'Saved',
-    saving: 'Saving…',
-    unsaved: 'Unsaved changes',
-    failed: 'Save failed'
-  }[saveState];
-
   return (
     <RosterContext.Provider value={{ state, saveState, retrySave, ...actions }}>
       {children}
-      {state.id && (
-        <div
-          className="pointer-events-none fixed bottom-3 right-3 z-20 flex items-center gap-2 rounded-sm border border-border-strong bg-surface-card px-3 py-2 text-xs text-subtle shadow-lg"
-          data-testid="roster-save-status"
-          aria-live="polite"
-        >
-          <span>{saveLabel}</span>
-          {saveState === 'failed' && (
-            <button
-              type="button"
-              className="pointer-events-auto font-bold text-accent-600 underline"
-              onClick={retrySave}
-            >
-              Retry
-            </button>
-          )}
-        </div>
-      )}
+      {state.id && <RosterSaveStatus saveState={saveState} onRetry={retrySave} />}
     </RosterContext.Provider>
   );
 };

@@ -101,6 +101,18 @@ describe('toStoredRoster', () => {
     expect(stored.points).toEqual({ current: 100, max: 2000 });
   });
 
+  it('persists an explicit attachment target', () => {
+    const stored = toStoredRoster({
+      ...roster,
+      units: [{ ...unit, attachedToUnitId: 'bodyguard' }, { ...unit, id: 'bodyguard' }]
+    });
+    expect(stored.units[0].attachedToUnitId).toBe('bodyguard');
+  });
+
+  it('keeps legacy units without an attachment field readable', () => {
+    expect('attachedToUnitId' in toStoredRoster(roster).units[0]).toBe(false);
+  });
+
   it('stores detachments and enhancements as references', () => {
     expect(stored.detachments).toEqual([{ id: 'det-1', slug: 'gladius', name: 'Gladius' }]);
     expect(stored.enhancements[0].enhancement).toEqual({

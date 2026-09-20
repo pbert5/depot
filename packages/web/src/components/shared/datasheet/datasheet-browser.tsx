@@ -17,12 +17,15 @@ import {
   filterDatasheetsBySupplement,
   getListItemRole,
   getListItemCategory,
+  deriveDatasheetCategory,
   getSupplementKey,
   isSupplementEntry,
   normalizeSupplementValue,
   shouldResetSupplementSelection,
   sortDatasheetsBySupplementPreference
 } from '@depot/core/utils/datasheets';
+import type { depot } from '@depot/core';
+import { getEffectiveKeywords } from '../../../../../core/src/utils/effective-keywords.js';
 import { getMinimumNumericPoints } from '@depot/core/utils/model-costs';
 import { searchItems } from '@depot/core/utils/search';
 import { Grid, Search } from '@/components/ui';
@@ -32,6 +35,10 @@ import useDebounce from '@/hooks/use-debounce';
 import { cx } from '@/utils/cx';
 import DatasheetSupplementTabs from './datasheet-supplement-tabs';
 import DatasheetListItemCard from './datasheet-list-item-card';
+
+type EffectiveKeywordAbility = Pick<depot.DetachmentAbility, 'id' | 'description'> & {
+  keywordGrants?: depot.DetachmentAbility['keywordGrants'];
+};
 
 interface DatasheetBrowserProps<T extends DatasheetListItem> {
   datasheets: T[];
@@ -44,6 +51,7 @@ interface DatasheetBrowserProps<T extends DatasheetListItem> {
   resultsClassName?: string;
   /** Enables the richer, stateful catalogue used by add-units routes. */
   catalogueMode?: boolean;
+  effectiveKeywordAbilities?: EffectiveKeywordAbility[];
 }
 
 type RoleTab = 'all' | BattlefieldRole | import('@depot/core/utils/datasheets').DatasheetCategory;
@@ -79,6 +87,17 @@ const numericPoints = <T extends DatasheetListItem>(item: T): number => {
   if ('modelCosts' in item) return getMinimumNumericPoints(item.modelCosts) ?? Number.MAX_SAFE_INTEGER;
   const points = item.points?.replace(/\+$/, '');
   return points && /^\d+$/.test(points) ? Number(points) : Number.MAX_SAFE_INTEGER;
+};
+
+const effectiveCategory = <T extends DatasheetListItem>(
+  sheet: T,
+  abilities: EffectiveKeywordAbility[]
+) => {
+  if (!('keywords' in sheet) || abilities.length === 0) return getListItemCategory(sheet);
+  const keywords = getEffectiveKeywords(sheet, abilities);
+  return deriveDatasheetCategory({
+    keywords
+  });
 };
 
 const deriveSupplementState = <T extends DatasheetListItem>(
@@ -141,7 +160,8 @@ export const DatasheetBrowser = <T extends DatasheetListItem>({
   showItemCount = true,
   filters,
   resultsClassName,
-  catalogueMode = false
+  catalogueMode = false,
+  effectiveKeywordAbilities = []
 }: DatasheetBrowserProps<T>) => {
   const [searchParams, setSearchParams] = useSearchParams();
   const initialCatalogueState = useMemo(() => readCatalogueState(searchParams), [searchParams]);
@@ -249,7 +269,7 @@ export const DatasheetBrowser = <T extends DatasheetListItem>({
   // picker) stay a flat list. Manifests generated before `role` existed report
   // everything as "other"; stay unfiltered rather than showing one meaningless pill.
   const roleTabs = useMemo(() => {
-    if (renderDatasheet && !catalogueMode) return null;
+    if (catalogueMode || (renderDatasheet && !catalogueMode)) return null;
     if (!searchedDatasheets.some((sheet) => getListItemRole(sheet) !== 'other')) return null;
 
     const counts = new Map<BattlefieldRole, number>();
@@ -268,13 +288,16 @@ export const DatasheetBrowser = <T extends DatasheetListItem>({
     ];
   }, [catalogueMode, renderDatasheet, searchedDatasheets]);
 
+  const categoryFor = (sheet: T) =>
+    effectiveCategory(sheet, effectiveKeywordAbilities);
+
   const visibleDatasheets = useMemo(() => {
     if (!catalogueMode && (!roleTabs || selectedRole === 'all')) return searchedDatasheets;
     if (selectedRole === 'all') return searchedDatasheets;
     return searchedDatasheets.filter((sheet) =>
-      catalogueMode ? getListItemCategory(sheet) === selectedRole : getListItemRole(sheet) === selectedRole
+      catalogueMode ? categoryFor(sheet) === selectedRole : getListItemRole(sheet) === selectedRole
     );
-  }, [catalogueMode, roleTabs, selectedRole, searchedDatasheets]);
+  }, [catalogueMode, effectiveKeywordAbilities, roleTabs, selectedRole, searchedDatasheets]);
 
   const emptyMessage = debouncedQuery
     ? 'No datasheets found matching your filters.'
@@ -290,7 +313,7 @@ export const DatasheetBrowser = <T extends DatasheetListItem>({
     ? [...DATASHEET_CATEGORIES.map((category) => ({
         value: category,
         label: DATASHEET_CATEGORY_LABELS[category],
-        count: searchedDatasheets.filter((sheet) => getListItemCategory(sheet) === category).length
+        count: searchedDatasheets.filter((sheet) => categoryFor(sheet) === category).length
       })), { value: 'all' as RoleTab, label: 'All', count: searchedDatasheets.length }]
         .filter((tab) => tab.count > 0)
     : roleTabs ?? [];
@@ -333,7 +356,7 @@ export const DatasheetBrowser = <T extends DatasheetListItem>({
   ) : null;
 
   const groupedResults = catalogueMode && !normalizedQuery && selectedRole === 'all'
-    ? DATASHEET_CATEGORIES.map((category) => ({ role: category, items: visibleDatasheets.filter((sheet) => getListItemCategory(sheet) === category) })).filter((group) => group.items.length > 0)
+    ? DATASHEET_CATEGORIES.map((category) => ({ role: category, items: visibleDatasheets.filter((sheet) => categoryFor(sheet) === category) })).filter((group) => group.items.length > 0)
     : null;
 
   return (

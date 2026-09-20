@@ -20,6 +20,12 @@ export interface UnitEditSelection {
   selectedWargear: depot.Wargear[];
   selectedWargearAbilities: depot.Ability[];
   selectedModelCost?: depot.ModelCost;
+  attachedToUnitId?: string | null;
+}
+
+export interface UnitAttachmentTarget {
+  unit: depot.RosterUnit;
+  label: string;
 }
 
 interface UnitEditShellProps {
@@ -37,6 +43,8 @@ interface UnitEditShellProps {
   beforeModelCost?: React.ReactNode;
   /** Extra content rendered at the end (e.g. roster enhancements/warlord). */
   afterGrid?: React.ReactNode;
+  /** Compatible in-roster bodyguard targets for a leader unit. */
+  attachmentTargets?: UnitAttachmentTarget[];
   onSave: (selection: UnitEditSelection) => void | Promise<void>;
 }
 
@@ -51,6 +59,7 @@ const UnitEditShell: React.FC<UnitEditShellProps> = ({
   modelCosts,
   beforeModelCost,
   afterGrid,
+  attachmentTargets,
   onSave
 }) => {
   const navigate = useNavigate();
@@ -68,6 +77,9 @@ const UnitEditShell: React.FC<UnitEditShellProps> = ({
   );
   const [selectedWargearAbilities, setSelectedWargearAbilities] = useState<depot.Ability[]>(() =>
     normalizeSelectedWargearAbilities(unit.selectedWargearAbilities, unit.datasheet.abilities)
+  );
+  const [attachedToUnitId, setAttachedToUnitId] = useState<string | null>(
+    unit.attachedToUnitId ?? null
   );
 
   const toggleWargear = (wargear: depot.Wargear, selected: boolean) =>
@@ -92,7 +104,12 @@ const UnitEditShell: React.FC<UnitEditShellProps> = ({
   );
 
   const handleSave = () =>
-    void onSave({ selectedWargear, selectedWargearAbilities, selectedModelCost });
+    void onSave({
+      selectedWargear,
+      selectedWargearAbilities,
+      selectedModelCost,
+      attachedToUnitId
+    });
 
   const currentPoints = parseInt((selectedModelCost ?? unit.modelCost).cost, 10) || 0;
   const startingPoints = parseInt(unit.modelCost.cost, 10) || 0;
@@ -143,6 +160,29 @@ const UnitEditShell: React.FC<UnitEditShellProps> = ({
           transport={unit.datasheet.transport}
           data-testid="unit-composition"
         />
+
+        {attachmentTargets?.length ? (
+          <section className="flex flex-col gap-1.5" data-testid="unit-attachment-section">
+            <SectionHeader title="Leader attachment" />
+            <label className="flex flex-col gap-1 text-sm text-foreground" htmlFor="unit-attachment-select">
+              Attached to
+              <select
+                id="unit-attachment-select"
+                value={attachedToUnitId ?? ''}
+                onChange={(event) => setAttachedToUnitId(event.target.value || null)}
+                className="h-10 rounded-lg border border-border bg-surface px-3 text-sm text-foreground focus-ring-primary"
+                data-testid="unit-attachment-select"
+              >
+                <option value="">Not attached</option>
+                {attachmentTargets.map(({ unit: target, label }) => (
+                  <option key={target.id} value={target.id}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </section>
+        ) : null}
 
         <section className="flex flex-col gap-1.5" data-testid="wargear-section">
           <SectionHeader title="Wargear" />

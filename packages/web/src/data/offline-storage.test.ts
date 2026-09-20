@@ -629,6 +629,38 @@ describe('OfflineStorage', () => {
       );
     });
 
+    it('preserves JSON API error detail and status when saving to the server', async () => {
+      const fetchSpy = vi.spyOn(global, 'fetch').mockResolvedValue({
+        ok: false,
+        status: 422,
+        json: async () => ({ detail: 'Roster is invalid' })
+      } as unknown as Response);
+
+      await expect(offlineStorage.saveRosterToServer(mockRoster)).rejects.toMatchObject({
+        message: 'Roster is invalid',
+        status: 422
+      });
+
+      fetchSpy.mockRestore();
+    });
+
+    it('uses a safe status fallback when an API error body is not JSON', async () => {
+      const fetchSpy = vi.spyOn(global, 'fetch').mockResolvedValue(
+        Object.assign(new Response(null, { status: 502 }), {
+          json: async () => {
+            throw new SyntaxError('Unexpected token');
+          }
+        })
+      );
+
+      await expect(offlineStorage.saveRosterToServer(mockRoster)).rejects.toMatchObject({
+        message: 'Depot API 502',
+        status: 502
+      });
+
+      fetchSpy.mockRestore();
+    });
+
     it('stores unit ids and selections instead of the datasheet', async () => {
       mockObjectStore.put.mockImplementation(() => {
         const request = { ...mockRequest };
@@ -799,6 +831,7 @@ describe('OfflineStorage', () => {
 
       await expect(offlineStorage.deleteRoster('test-roster')).resolves.toBeUndefined();
       expect(mockObjectStore.delete).toHaveBeenCalledWith(expect.stringContaining('test-roster'));
+      expect(mockDatabase.transaction).toHaveBeenCalledWith(['scopedRosters'], 'readwrite');
     });
 
     it('should handle roster save errors', async () => {
@@ -851,7 +884,7 @@ describe('OfflineStorage', () => {
   });
 
   describe('profile isolation and legacy migration', () => {
-    it('uses a profile key for local drafts and bookmarks', async () => {
+    it('uses profile-scoped keys for roster and collection drafts', async () => {
       const profileId = 'profile-two';
       offlineStorage.setProfileId(profileId);
       mockObjectStore.put.mockImplementation((value, key) => {
@@ -861,11 +894,16 @@ describe('OfflineStorage', () => {
       });
 
       await offlineStorage.saveRosterLocally(mockRoster);
+      await offlineStorage.saveCollection(mockCollection);
       await offlineStorage.setBookmarks([]);
 
       expect(mockObjectStore.put).toHaveBeenCalledWith(
         expect.objectContaining({ profileId }),
         `${profileId}:${mockRoster.id}`
+      );
+      expect(mockObjectStore.put).toHaveBeenCalledWith(
+        expect.objectContaining({ profileId }),
+        `${profileId}:${mockCollection.id}`
       );
       expect(mockObjectStore.put).toHaveBeenCalledWith([], `${profileId}:bookmarks`);
       offlineStorage.setProfileId(LOCAL_PROFILE_ID);

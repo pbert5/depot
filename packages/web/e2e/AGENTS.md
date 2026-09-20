@@ -7,7 +7,7 @@ End-to-end coverage for the web app using Playwright.
 - `pnpm --filter @depot/web dlx playwright install chromium` - install browsers once.
 
 ## Test Conventions
-- Base config: `packages/web/playwright.config.ts` (dev server on `PORT` - default `5173` - and `HOST` - default `localhost`; override the base URL with `WEB_BASE_URL` when needed).
+- Base config: `packages/web/playwright.config.ts` (dev server on `PORT` - default `5173` - and `HOST` - default `localhost`; override browser traffic with `WEB_BASE_URL`; set `E2E_API_BASE_URL` separately when profile setup must reach a Compose API hostname).
 - Keep tests self-contained and stateless; rely on generated data in `packages/web/public/data` (run CLI + copy-data first).
 - Prefer stable `data-testid` selectors; fall back to roles only when an element is inherently labeled (e.g., headings). Avoid brittle text queries.
 - Assert navigation (`expect(page).toHaveURL(...)`) after clicks.

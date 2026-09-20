@@ -16,12 +16,14 @@ export const ProfileProvider: FC<{ children: ReactNode }> = ({ children }) => {
   const [state, setState] = useState<ProfileList | null>(null);
   const [loading, setLoading] = useState(true);
   const migration = useRef<Promise<unknown> | null>(null);
+  const refreshGeneration = useRef(0);
   const startMigration = () => {
     migration.current ??= offlineStorage.migrateLegacyUserData().finally(() => {
       migration.current = null;
     });
   };
   const refresh = async () => {
+    const generation = ++refreshGeneration.current;
     // Legacy v11 data belongs to the Local profile and must be recoverable
     // even when the profile API is unavailable (for example, while offline).
     // Keep this independent from profile discovery; the migration has its own
@@ -31,12 +33,14 @@ export const ProfileProvider: FC<{ children: ReactNode }> = ({ children }) => {
     });
     try {
       const next = await profilesApi.list();
+      if (generation !== refreshGeneration.current) return;
       setState(next);
       offlineStorage.setProfileId(next.activeProfileId || next.active.id || LOCAL_PROFILE_ID);
     } catch {
       // The profile API is unavailable in offline and non-browser runtimes.
       // Keep any previously loaded profile and allow the rest of the app to render.
     } finally {
+      if (generation !== refreshGeneration.current) return;
       // The migration was started before profile discovery. Do not start it a
       // second time here when a fast migration has already settled; failed
       // documents retain their checkpoints and are retried on the next app

@@ -12,6 +12,11 @@ import { useRosterUnitSelection } from '@/hooks/use-roster-unit-selection';
 import type { SelectedUnit } from '@/hooks/use-roster-unit-selection';
 import { useSettingsContext } from '@/contexts/settings/context';
 import { groupBy } from '@depot/core/utils/common';
+import type { depot } from '@depot/core';
+
+type EffectiveKeywordAbility = Pick<depot.DetachmentAbility, 'id' | 'description'> & {
+  keywordGrants?: depot.DetachmentAbility['keywordGrants'];
+};
 
 interface AddUnitsViewProps {
   factionSlug?: string;
@@ -22,6 +27,7 @@ interface AddUnitsViewProps {
   subtitle?: string;
   /** Budget context pinned above the list — e.g. the roster points bar. */
   headerStats?: ReactNode;
+  effectiveKeywordAbilities?: EffectiveKeywordAbility[];
   /** Noun used in the info alert copy, e.g. "roster" or "collection". */
   onConfirm: (selectedUnits: SelectedUnit[], clearSelection: () => void) => void | Promise<void>;
 }
@@ -34,7 +40,8 @@ const AddUnitsView: FC<AddUnitsViewProps> = ({
   title,
   subtitle,
   headerStats,
-  onConfirm
+  onConfirm,
+  effectiveKeywordAbilities
 }) => {
   const { settings } = useSettingsContext();
   const {
@@ -143,6 +150,7 @@ const AddUnitsView: FC<AddUnitsViewProps> = ({
               emptyStateMessage="No units available for this faction."
               filters={datasheetFilters}
               catalogueMode
+              effectiveKeywordAbilities={effectiveKeywordAbilities}
               resultsClassName={hasSelections ? 'pb-28 md:pb-24' : undefined}
               renderDatasheet={(datasheet) => (
                 <DatasheetSelectionCard

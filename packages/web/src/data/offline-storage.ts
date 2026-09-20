@@ -40,8 +40,17 @@ const apiRequest = async <T>(path: string, init?: RequestInit): Promise<T> => {
     headers: { 'content-type': 'application/json', ...(init?.headers ?? {}) }
   });
   if (!response.ok) {
-    const error = new Error(`Depot API ${response.status}`) as Error & { status?: number };
+    const error = new Error(`Depot API ${response.status}`) as Error & { status?: number; detail?: string };
     error.status = response.status;
+    try {
+      const body = (await response.json()) as { detail?: unknown };
+      if (typeof body?.detail === 'string' && body.detail) {
+        error.detail = body.detail;
+        error.message = body.detail;
+      }
+    } catch {
+      // Keep the status-based error when the response body is not JSON.
+    }
     throw error;
   }
   return (response.status === 204 ? undefined : await response.json()) as T;
@@ -512,7 +521,7 @@ class OfflineStorage {
     } catch {
       // A local draft may still be removed while offline.
     }
-    const store = await this.store(STORES.ROSTERS, 'readwrite');
+    const store = await this.scopedStore(STORES.SCOPED_ROSTERS, 'readwrite');
     await req(store.delete(scopedKey(this.profileId, rosterId)));
   }
 

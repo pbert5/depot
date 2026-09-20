@@ -24,6 +24,7 @@ interface RosterUnitCardCompactProps {
   className?: string;
   isWarlord?: boolean;
   enhancementName?: string;
+  attachedToUnitName?: string;
   /** Legality problems attributed to this unit; renders the invalid treatment. */
   issues?: string[];
 }
@@ -45,6 +46,7 @@ const RosterUnitCardCompact: FC<RosterUnitCardCompactProps> = ({
   className,
   isWarlord = false,
   enhancementName,
+  attachedToUnitName,
   issues = []
 }) => {
   const unitPoints = parseInt(unit.modelCost.cost, 10) || 0;
@@ -91,13 +93,15 @@ const RosterUnitCardCompact: FC<RosterUnitCardCompactProps> = ({
           <div className="flex flex-wrap items-center gap-1">
             {isWarlord ? (
               <span
-                role="img"
-                aria-label="Warlord"
-                title="Warlord"
-                className="mr-1 shrink-0 text-accent"
+                className="mr-1 flex shrink-0 items-center gap-1"
                 data-testid="unit-warlord-tag"
               >
-                <Crown size={14} aria-hidden />
+                <span role="img" aria-label="Warlord" title="Warlord" className="text-accent">
+                  <Crown size={14} aria-hidden />
+                </span>
+                <Tag variant="primary" size="sm">
+                  Warlord
+                </Tag>
               </span>
             ) : null}
             {unit.datasheet.isForgeWorld ? (
@@ -142,6 +146,12 @@ const RosterUnitCardCompact: FC<RosterUnitCardCompactProps> = ({
                 {enhancementName}
               </Tag>
             </div>
+          ) : null}
+
+          {attachedToUnitName ? (
+            <p className="text-[11px] leading-snug text-muted" data-testid="unit-attachment">
+              Attached to {attachedToUnitName}
+            </p>
           ) : null}
 
           {issues.length > 0 ? (
