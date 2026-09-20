@@ -36,11 +36,14 @@ describe('UnitEditShell', () => {
       ]
     });
     const unit = createMockRosterUnit({ datasheet });
-    const onSave = vi.fn<(selection: {
-      selectedWargear: depot.Wargear[];
-      selectedWargearAbilities: depot.Ability[];
-      selectedModelCost?: depot.ModelCost;
-    }) => void>();
+    const onSave =
+      vi.fn<
+        (selection: {
+          selectedWargear: depot.Wargear[];
+          selectedWargearAbilities: depot.Ability[];
+          selectedModelCost?: depot.ModelCost;
+        }) => void
+      >();
 
     render(
       <UnitEditShell
@@ -136,7 +139,9 @@ describe('UnitEditShell', () => {
     fireEvent.change(attachment, { target: { value: targetTwo.id } });
     fireEvent.click(screen.getByTestId('save-button'));
 
-    expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ attachedToUnitId: targetTwo.id }));
+    expect(onSave).toHaveBeenCalledWith(
+      expect.objectContaining({ attachedToUnitId: targetTwo.id })
+    );
   });
 
   it('does not render an attachment control when no targets are provided', () => {

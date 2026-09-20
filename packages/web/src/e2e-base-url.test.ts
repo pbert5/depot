@@ -6,13 +6,18 @@ const resolveE2EApiBaseURL = (environment: {
   HOST?: string;
   PORT?: string;
 }) =>
-  environment.E2E_API_BASE_URL
-  ?? environment.WEB_BASE_URL
-  ?? `http://${environment.HOST ?? 'localhost'}:${environment.PORT ?? '5173'}`;
+  environment.E2E_API_BASE_URL ??
+  environment.WEB_BASE_URL ??
+  `http://${environment.HOST ?? 'localhost'}:${environment.PORT ?? '5173'}`;
 
 describe('resolveE2EApiBaseURL', () => {
   it('prefers E2E_API_BASE_URL for API setup', () => {
-    expect(resolveE2EApiBaseURL({ E2E_API_BASE_URL: 'http://depot-api:8787', WEB_BASE_URL: 'http://depot-web' })).toBe('http://depot-api:8787');
+    expect(
+      resolveE2EApiBaseURL({
+        E2E_API_BASE_URL: 'http://depot-api:8787',
+        WEB_BASE_URL: 'http://depot-web'
+      })
+    ).toBe('http://depot-api:8787');
   });
 
   it('falls back to WEB_BASE_URL for backwards compatibility', () => {

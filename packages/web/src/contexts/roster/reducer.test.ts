@@ -348,37 +348,62 @@ describe('rosterReducer', () => {
     it('does not copy an attachment onto the duplicate', () => {
       const configuredUnit = createMockRosterUnit({ attachedToUnitId: 'bodyguard' });
       const result = rosterReducer(createMockRoster({ units: [configuredUnit] }), {
-        type: 'DUPLICATE_UNIT', payload: { unit: configuredUnit }
+        type: 'DUPLICATE_UNIT',
+        payload: { unit: configuredUnit }
       });
       expect(result.units[1].attachedToUnitId).toBeNull();
     });
   });
 
   describe('attachments', () => {
-    const support = createMockDatasheet({ id: 'support', isSupport: true, leaders: [{ id: mockRosterUnit.datasheet.id, slug: 'captain' }] });
+    const support = createMockDatasheet({
+      id: 'support',
+      isSupport: true,
+      leaders: [{ id: mockRosterUnit.datasheet.id, slug: 'captain' }]
+    });
     const bodyguard = mockRosterUnit;
 
     it('attaches a legal leader and detaches it explicitly', () => {
       const leader = createMockRosterUnit({ id: 'leader', datasheet: support });
       const roster = createMockRoster({ units: [bodyguard, leader] });
-      const attached = rosterReducer(roster, { type: 'ATTACH_UNIT', payload: { leaderUnitId: leader.id, bodyguardUnitId: bodyguard.id } });
-      expect(attached.units.find((unit) => unit.id === leader.id)?.attachedToUnitId).toBe(bodyguard.id);
-      const detached = rosterReducer(attached, { type: 'DETACH_UNIT', payload: { leaderUnitId: leader.id } });
+      const attached = rosterReducer(roster, {
+        type: 'ATTACH_UNIT',
+        payload: { leaderUnitId: leader.id, bodyguardUnitId: bodyguard.id }
+      });
+      expect(attached.units.find((unit) => unit.id === leader.id)?.attachedToUnitId).toBe(
+        bodyguard.id
+      );
+      const detached = rosterReducer(attached, {
+        type: 'DETACH_UNIT',
+        payload: { leaderUnitId: leader.id }
+      });
       expect(detached.units.find((unit) => unit.id === leader.id)?.attachedToUnitId).toBeNull();
     });
 
     it.each([
-      ['self', 'leader', 'leader'], ['missing leader', 'missing', 'bodyguard'], ['missing bodyguard', 'leader', 'missing']
+      ['self', 'leader', 'leader'],
+      ['missing leader', 'missing', 'bodyguard'],
+      ['missing bodyguard', 'leader', 'missing']
     ])('ignores %s attachments', (_name, leaderUnitId, bodyguardUnitId) => {
       const leader = createMockRosterUnit({ id: 'leader', datasheet: support });
       const roster = createMockRoster({ units: [bodyguard, leader] });
-      const result = rosterReducer(roster, { type: 'ATTACH_UNIT', payload: { leaderUnitId, bodyguardUnitId } });
+      const result = rosterReducer(roster, {
+        type: 'ATTACH_UNIT',
+        payload: { leaderUnitId, bodyguardUnitId }
+      });
       expect(result).toBe(roster);
     });
 
     it('clears attachments when a bodyguard is removed', () => {
-      const leader = createMockRosterUnit({ id: 'leader', datasheet: support, attachedToUnitId: bodyguard.id });
-      const result = rosterReducer(createMockRoster({ units: [bodyguard, leader] }), { type: 'REMOVE_UNIT', payload: { rosterUnitId: bodyguard.id } });
+      const leader = createMockRosterUnit({
+        id: 'leader',
+        datasheet: support,
+        attachedToUnitId: bodyguard.id
+      });
+      const result = rosterReducer(createMockRoster({ units: [bodyguard, leader] }), {
+        type: 'REMOVE_UNIT',
+        payload: { rosterUnitId: bodyguard.id }
+      });
       expect(result.units[0].attachedToUnitId).toBeNull();
     });
   });

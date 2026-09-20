@@ -24,7 +24,9 @@ const keyword = (value: string) => [
 ];
 
 describe('DatasheetBrowser', () => {
-  const LocationSearch = () => <output data-testid="location-search">{useLocation().search}</output>;
+  const LocationSearch = () => (
+    <output data-testid="location-search">{useLocation().search}</output>
+  );
   beforeEach(() => {
     window.history.replaceState({}, '', '/');
     sessionStorage.clear();
@@ -146,13 +148,27 @@ describe('DatasheetBrowser', () => {
 
   it('uses one category tab system in catalogue mode', () => {
     const roleDatasheets = [
-      createMockDatasheet({ id: 'captain', slug: 'captain', name: 'Captain', keywords: keyword('CHARACTER') }),
-      createMockDatasheet({ id: 'intercessor', slug: 'intercessor', name: 'Intercessor', keywords: keyword('BATTLELINE') })
+      createMockDatasheet({
+        id: 'captain',
+        slug: 'captain',
+        name: 'Captain',
+        keywords: keyword('CHARACTER')
+      }),
+      createMockDatasheet({
+        id: 'intercessor',
+        slug: 'intercessor',
+        name: 'Intercessor',
+        keywords: keyword('BATTLELINE')
+      })
     ];
 
     render(
       <TestWrapper>
-        <DatasheetBrowser datasheets={roleDatasheets} catalogueMode renderDatasheet={(sheet) => <span>{sheet.name}</span>} />
+        <DatasheetBrowser
+          datasheets={roleDatasheets}
+          catalogueMode
+          renderDatasheet={(sheet) => <span>{sheet.name}</span>}
+        />
       </TestWrapper>
     );
 
@@ -173,11 +189,13 @@ describe('DatasheetBrowser', () => {
         <DatasheetBrowser
           datasheets={[datasheet]}
           catalogueMode
-          effectiveKeywordAbilities={[{
-            id: 'detachment-rule',
-            description: 'Your INFANTRY units gain the CHARACTER keyword.',
-            keywordGrants: [{ targetKeyword: 'INFANTRY', grantedKeyword: 'CHARACTER' }]
-          }]}
+          effectiveKeywordAbilities={[
+            {
+              id: 'detachment-rule',
+              description: 'Your INFANTRY units gain the CHARACTER keyword.',
+              keywordGrants: [{ targetKeyword: 'INFANTRY', grantedKeyword: 'CHARACTER' }]
+            }
+          ]}
           renderDatasheet={(sheet) => <span>{sheet.name}</span>}
         />
       </TestWrapper>
@@ -200,10 +218,12 @@ describe('DatasheetBrowser', () => {
         <DatasheetBrowser
           datasheets={[datasheet]}
           catalogueMode
-          effectiveKeywordAbilities={[{
-            id: 'detachment-rule',
-            description: 'Your INFANTRY units gain the CHARACTER keyword.'
-          }]}
+          effectiveKeywordAbilities={[
+            {
+              id: 'detachment-rule',
+              description: 'Your INFANTRY units gain the CHARACTER keyword.'
+            }
+          ]}
           renderDatasheet={(sheet) => <span>{sheet.name}</span>}
         />
       </TestWrapper>
@@ -254,10 +274,31 @@ describe('DatasheetBrowser', () => {
 
   it('persists catalogue search, category and sort state in the URL', async () => {
     const roleDatasheets = [
-      createMockDatasheet({ id: 'captain', slug: 'captain', name: 'Captain', keywords: keyword('CHARACTER') }),
-      createMockDatasheet({ id: 'intercessor', slug: 'intercessor-squad', name: 'Intercessor Squad', keywords: keyword('BATTLELINE') })
+      createMockDatasheet({
+        id: 'captain',
+        slug: 'captain',
+        name: 'Captain',
+        keywords: keyword('CHARACTER')
+      }),
+      createMockDatasheet({
+        id: 'intercessor',
+        slug: 'intercessor-squad',
+        name: 'Intercessor Squad',
+        keywords: keyword('BATTLELINE')
+      })
     ];
-    render(<TestWrapper><><DatasheetBrowser datasheets={roleDatasheets} catalogueMode renderDatasheet={(sheet) => <span>{sheet.name}</span>} /><LocationSearch /></></TestWrapper>);
+    render(
+      <TestWrapper>
+        <>
+          <DatasheetBrowser
+            datasheets={roleDatasheets}
+            catalogueMode
+            renderDatasheet={(sheet) => <span>{sheet.name}</span>}
+          />
+          <LocationSearch />
+        </>
+      </TestWrapper>
+    );
 
     fireEvent.change(screen.getByTestId('datasheet-search'), { target: { value: 'capt' } });
     fireEvent.change(screen.getByTestId('datasheet-sort'), { target: { value: 'points' } });
@@ -271,11 +312,32 @@ describe('DatasheetBrowser', () => {
   });
 
   it('groups an empty catalogue by category and restores state from the session fallback', async () => {
-    sessionStorage.setItem('depot:datasheet-catalogue-state', JSON.stringify({ q: '', group: 'all', sort: 'name', filter: 'all' }));
-    render(<TestWrapper><DatasheetBrowser datasheets={[
-      createMockDatasheet({ id: 'captain', slug: 'captain', name: 'Captain', keywords: keyword('CHARACTER') }),
-      createMockDatasheet({ id: 'intercessor', slug: 'intercessor-squad', name: 'Intercessor Squad', keywords: keyword('BATTLELINE') })
-    ]} catalogueMode renderDatasheet={(sheet) => <span>{sheet.name}</span>} /></TestWrapper>);
+    sessionStorage.setItem(
+      'depot:datasheet-catalogue-state',
+      JSON.stringify({ q: '', group: 'all', sort: 'name', filter: 'all' })
+    );
+    render(
+      <TestWrapper>
+        <DatasheetBrowser
+          datasheets={[
+            createMockDatasheet({
+              id: 'captain',
+              slug: 'captain',
+              name: 'Captain',
+              keywords: keyword('CHARACTER')
+            }),
+            createMockDatasheet({
+              id: 'intercessor',
+              slug: 'intercessor-squad',
+              name: 'Intercessor Squad',
+              keywords: keyword('BATTLELINE')
+            })
+          ]}
+          catalogueMode
+          renderDatasheet={(sheet) => <span>{sheet.name}</span>}
+        />
+      </TestWrapper>
+    );
 
     expect(screen.getByRole('heading', { name: 'Characters' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Battleline' })).toBeInTheDocument();

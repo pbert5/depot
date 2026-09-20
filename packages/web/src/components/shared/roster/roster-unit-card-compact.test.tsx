@@ -27,6 +27,8 @@ describe('RosterUnitCardCompact', () => {
       />
     );
 
-    expect(screen.getByTestId('unit-attachment')).toHaveTextContent('Attached to Bodyguard · Unit 1');
+    expect(screen.getByTestId('unit-attachment')).toHaveTextContent(
+      'Attached to Bodyguard · Unit 1'
+    );
   });
 });

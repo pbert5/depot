@@ -1,4 +1,13 @@
-import { createContext, useContext, useEffect, useMemo, useRef, useState, type FC, type ReactNode } from 'react';
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type FC,
+  type ReactNode
+} from 'react';
 import { LOCAL_PROFILE_ID, offlineStorage } from '@/data/offline-storage';
 import { profilesApi, type Profile, type ProfileList } from '@/data/profiles';
 
@@ -57,16 +66,21 @@ export const ProfileProvider: FC<{ children: ReactNode }> = ({ children }) => {
   const selectProfile = async (profileId: string) => {
     const profile = await profilesApi.select(profileId);
     offlineStorage.setProfileId(profile.id);
-    setState((current) => current ? { ...current, active: profile, activeProfileId: profile.id } : current);
+    setState((current) =>
+      current ? { ...current, active: profile, activeProfileId: profile.id } : current
+    );
     return profile;
   };
-  const value = useMemo(() => ({
-    profile: state?.active ?? null,
-    profileId: offlineStorage.getProfileId(),
-    loading,
-    refresh,
-    selectProfile
-  }), [state, loading]);
+  const value = useMemo(
+    () => ({
+      profile: state?.active ?? null,
+      profileId: offlineStorage.getProfileId(),
+      loading,
+      refresh,
+      selectProfile
+    }),
+    [state, loading]
+  );
   return <ProfileContext.Provider value={value}>{children}</ProfileContext.Provider>;
 };
 

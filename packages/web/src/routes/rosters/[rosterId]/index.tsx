@@ -84,7 +84,11 @@ const RosterView: FC = () => {
       showToast({ title: 'Roster exported', type: 'success' });
     } catch (error) {
       console.error('Failed to export roster as YAML', error);
-      showToast({ title: 'Export failed', message: 'Could not export this roster as YAML.', type: 'error' });
+      showToast({
+        title: 'Export failed',
+        message: 'Could not export this roster as YAML.',
+        type: 'error'
+      });
     }
   };
 

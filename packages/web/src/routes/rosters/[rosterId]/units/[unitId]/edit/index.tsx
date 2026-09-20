@@ -10,7 +10,10 @@ import { useToast } from '@/contexts/toast/context';
 import AppLayout from '@/components/layout';
 import { ErrorState, PageHeaderSkeleton, SectionHeader, SkeletonCard } from '@/components/ui';
 import UnitEditShell from '@/components/shared/unit-edit/unit-edit-shell';
-import type { UnitAttachmentTarget, UnitEditSelection } from '@/components/shared/unit-edit/unit-edit-shell';
+import type {
+  UnitAttachmentTarget,
+  UnitEditSelection
+} from '@/components/shared/unit-edit/unit-edit-shell';
 import EnhancementSelection from './_components/enhancement-selection';
 import WarlordSelection from './_components/warlord-selection';
 import { isCharacter } from '@depot/core/utils/datasheets';
@@ -50,7 +53,9 @@ const EditRosterUnitForm: React.FC<{ unit: depot.RosterUnit }> = ({ unit }) => {
       (target) => getUnitAttachmentEligibility(roster, unit.id, target.id).eligible
     );
     const counts = new Map<string, number>();
-    compatible.forEach((target) => counts.set(target.datasheet.name, (counts.get(target.datasheet.name) ?? 0) + 1));
+    compatible.forEach((target) =>
+      counts.set(target.datasheet.name, (counts.get(target.datasheet.name) ?? 0) + 1)
+    );
     const seen = new Map<string, number>();
     return compatible.map((target) => {
       const count = counts.get(target.datasheet.name) ?? 0;

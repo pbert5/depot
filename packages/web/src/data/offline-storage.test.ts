@@ -527,7 +527,8 @@ describe('OfflineStorage', () => {
 
       await expect(offlineStorage.setDataVersion('next-version')).resolves.toBeUndefined();
       expect(mockObjectStore.put).toHaveBeenCalledWith(
-        'next-version', expect.stringContaining('data-version')
+        'next-version',
+        expect.stringContaining('data-version')
       );
     });
 
@@ -914,12 +915,18 @@ describe('OfflineStorage', () => {
       let legacyReads = 0;
       const markers = new Set<string>();
       mockObjectStore.getAll.mockImplementation(() => {
-        const request = { ...mockRequest, result: legacyReads++ === 0 ? [mockRoster] : [legacyCollection] };
+        const request = {
+          ...mockRequest,
+          result: legacyReads++ === 0 ? [mockRoster] : [legacyCollection]
+        };
         setTimeout(() => request.onsuccess?.(), 0);
         return request;
       });
       mockObjectStore.get.mockImplementation((key) => {
-        const request = { ...mockRequest, result: markers.has(key) ? new Date().toISOString() : undefined };
+        const request = {
+          ...mockRequest,
+          result: markers.has(key) ? new Date().toISOString() : undefined
+        };
         setTimeout(() => request.onsuccess?.(), 0);
         return request;
       });
@@ -929,7 +936,8 @@ describe('OfflineStorage', () => {
         setTimeout(() => request.onsuccess?.(), 0);
         return request;
       });
-      const fetchSpy = vi.spyOn(global, 'fetch')
+      const fetchSpy = vi
+        .spyOn(global, 'fetch')
         .mockResolvedValueOnce({ ok: false, status: 503 } as Response)
         .mockResolvedValue({ ok: true, status: 200, json: async () => ({}) } as Response);
 
@@ -944,8 +952,14 @@ describe('OfflineStorage', () => {
       legacyReads = 0;
       await offlineStorage.migrateLegacyUserData();
       expect(fetchSpy.mock.calls.length).toBeGreaterThan(callsAfterFirstRun);
-      expect(fetchSpy.mock.calls.filter(([url]) => String(url).includes(`/rosters/${mockRoster.id}`))).toHaveLength(2);
-      expect(fetchSpy.mock.calls.filter(([url]) => String(url).includes(`/collections/${legacyCollection.id}`))).toHaveLength(1);
+      expect(
+        fetchSpy.mock.calls.filter(([url]) => String(url).includes(`/rosters/${mockRoster.id}`))
+      ).toHaveLength(2);
+      expect(
+        fetchSpy.mock.calls.filter(([url]) =>
+          String(url).includes(`/collections/${legacyCollection.id}`)
+        )
+      ).toHaveLength(1);
       fetchSpy.mockRestore();
     });
   });

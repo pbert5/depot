@@ -196,7 +196,11 @@ describe('CollectionPage', () => {
   });
 
   it('selects the visible filtered view and clears selection when the filter changes', () => {
-    render(<TestWrapper><CollectionPage /></TestWrapper>);
+    render(
+      <TestWrapper>
+        <CollectionPage />
+      </TestWrapper>
+    );
 
     fireEvent.click(screen.getByTestId('toggle-selection-mode'));
     fireEvent.click(screen.getByTestId('select-visible-units'));
@@ -209,7 +213,11 @@ describe('CollectionPage', () => {
   });
 
   it('uses keyboard-accessible cards without navigating in select mode and supports cancel', () => {
-    render(<TestWrapper><CollectionPage /></TestWrapper>);
+    render(
+      <TestWrapper>
+        <CollectionPage />
+      </TestWrapper>
+    );
 
     fireEvent.click(screen.getByTestId('toggle-selection-mode'));
     const card = screen.getAllByRole('checkbox')[0];
@@ -223,7 +231,11 @@ describe('CollectionPage', () => {
   });
 
   it('persists a bulk removal once and clears selection after success', async () => {
-    render(<TestWrapper><CollectionPage /></TestWrapper>);
+    render(
+      <TestWrapper>
+        <CollectionPage />
+      </TestWrapper>
+    );
 
     fireEvent.click(screen.getByTestId('toggle-selection-mode'));
     fireEvent.click(screen.getByTestId('select-visible-units'));

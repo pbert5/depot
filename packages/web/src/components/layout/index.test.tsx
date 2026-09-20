@@ -287,7 +287,10 @@ describe('AppLayout', () => {
   it('replaces mobile navigation with the route-defined drill-in back link', () => {
     render(
       <TestWrapper initialEntries={['/faction/space-marines/datasheet/intercessor']}>
-        <AppLayout title="Datasheet" back={{ to: '/faction/space-marines', label: 'Space Marines' }}>
+        <AppLayout
+          title="Datasheet"
+          back={{ to: '/faction/space-marines', label: 'Space Marines' }}
+        >
           <p>datasheet</p>
         </AppLayout>
       </TestWrapper>

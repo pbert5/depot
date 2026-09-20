@@ -32,7 +32,10 @@ export type RosterAction =
   | { type: 'DUPLICATE_UNIT'; payload: { unit: depot.RosterUnit } }
   | { type: 'ATTACH_UNIT'; payload: { leaderUnitId: string; bodyguardUnitId: string } }
   | { type: 'DETACH_UNIT'; payload: { leaderUnitId: string } }
-  | { type: 'SET_UNIT_ATTACHMENT'; payload: { leaderUnitId: string; bodyguardUnitId: string | null } }
+  | {
+      type: 'SET_UNIT_ATTACHMENT';
+      payload: { leaderUnitId: string; bodyguardUnitId: string | null };
+    }
   | { type: 'REMOVE_UNIT'; payload: { rosterUnitId: string } }
   | { type: 'UPDATE_UNIT_WARGEAR'; payload: { rosterUnitId: string; wargear: depot.Wargear[] } }
   | {

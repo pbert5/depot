@@ -61,7 +61,9 @@ const AddRosterUnitsView: FC = () => {
       title="Add units"
       subtitle={`${roster.name} · ${getRosterSubtitle(roster)}`}
       headerStats={<RosterHeader roster={roster} />}
-      effectiveKeywordAbilities={getRosterDetachments(roster).flatMap((detachment) => detachment.abilities)}
+      effectiveKeywordAbilities={getRosterDetachments(roster).flatMap(
+        (detachment) => detachment.abilities
+      )}
       onConfirm={handleAddSelectedUnits}
     />
   );

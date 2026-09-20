@@ -164,7 +164,10 @@ const UnitEditShell: React.FC<UnitEditShellProps> = ({
         {attachmentTargets?.length ? (
           <section className="flex flex-col gap-1.5" data-testid="unit-attachment-section">
             <SectionHeader title="Leader attachment" />
-            <label className="flex flex-col gap-1 text-sm text-foreground" htmlFor="unit-attachment-select">
+            <label
+              className="flex flex-col gap-1 text-sm text-foreground"
+              htmlFor="unit-attachment-select"
+            >
               Attached to
               <select
                 id="unit-attachment-select"
