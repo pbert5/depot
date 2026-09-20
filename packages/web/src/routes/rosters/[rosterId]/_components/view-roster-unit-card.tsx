@@ -7,6 +7,7 @@ interface ViewRosterUnitCardProps {
   unit: depot.RosterUnit;
   isWarlord?: boolean;
   enhancementName?: string;
+  attachedToUnitName?: string;
   issues?: string[];
 }
 
@@ -14,6 +15,7 @@ const ViewRosterUnitCard: React.FC<ViewRosterUnitCardProps> = ({
   unit,
   isWarlord,
   enhancementName,
+  attachedToUnitName,
   issues
 }) => {
   const [isExpanded, setIsExpanded] = useState(false);
@@ -30,6 +32,7 @@ const ViewRosterUnitCard: React.FC<ViewRosterUnitCardProps> = ({
       unit={unit}
       isWarlord={isWarlord}
       enhancementName={enhancementName}
+      attachedToUnitName={attachedToUnitName}
       issues={issues}
       actions={actions}
       onClick={() => setIsExpanded((prev) => !prev)}

@@ -18,10 +18,7 @@ import {
 } from '@/components/shared/roster';
 import { getRosterSubtitle } from '@depot/core/utils/roster';
 import { validateRoster } from '@depot/core/utils/roster-legality';
-import {
-  BATTLEFIELD_ROLES,
-  BATTLEFIELD_ROLE_LABELS
-} from '@depot/core/utils/datasheets';
+import { BATTLEFIELD_ROLES, BATTLEFIELD_ROLE_LABELS } from '@depot/core/utils/datasheets';
 import { getRosterBattlefieldRole } from '@depot/core/utils/roster-legality';
 import RosterIssues from '@/routes/rosters/_components/roster-issues';
 

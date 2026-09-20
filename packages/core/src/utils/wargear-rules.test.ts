@@ -48,20 +48,38 @@ describe('equipment evaluator', () => {
     });
     expect(result.counts[id('Heavy Tool')]).toBe(2);
     expect(result.appliedChoices.map(({ name }) => name)).toContain('Special Blade');
-    expect(result.actions[id('Heavy Tool')]).toMatchObject({ current: 2, capacity: 2, canIncrement: false });
+    expect(result.actions[id('Heavy Tool')]).toMatchObject({
+      current: 2,
+      capacity: 2,
+      canIncrement: false
+    });
     expect(result.issues.map(({ code }) => code)).toContain('prerequisite');
   });
 
   it('keeps legacy selections as free one-per-item toggles without structured rules', () => {
-    const result = evaluateEquipment({ wargear: syntheticWargear, selection: [syntheticWargear[0]] });
+    const result = evaluateEquipment({
+      wargear: syntheticWargear,
+      selection: [syntheticWargear[0]]
+    });
     expect(result.issues).toEqual([]);
-    expect(result.actions[id('Basic Gun')]).toMatchObject({ current: 1, capacity: 1, canIncrement: false, canDecrement: true });
-    expect(result.actions[id('Shield')]).toMatchObject({ current: 0, capacity: 1, canIncrement: true });
+    expect(result.actions[id('Basic Gun')]).toMatchObject({
+      current: 1,
+      capacity: 1,
+      canIncrement: false,
+      canDecrement: true
+    });
+    expect(result.actions[id('Shield')]).toMatchObject({
+      current: 0,
+      capacity: 1,
+      canIncrement: true
+    });
   });
 
   it('fails closed for parser diagnostics and rejects a model-size shrink that breaks capacity', () => {
     const unsupported = parseWargearRules(syntheticLoadouts.unsupported, syntheticWargear);
-    expect(evaluateEquipment({ wargear: syntheticWargear, rules: unsupported }).issues[0].code).toBe('unsupported-prose');
+    expect(
+      evaluateEquipment({ wargear: syntheticWargear, rules: unsupported }).issues[0].code
+    ).toBe('unsupported-prose');
     const result = transitionEquipment({
       wargear: syntheticWargear,
       rules,
@@ -81,7 +99,10 @@ describe('equipment evaluator', () => {
       modelSize: 5,
       selection: { [id('Heavy Tool')]: 1 }
     };
-    const result = transitionEquipment({ ...input, action: { choiceId: id('Heavy Tool'), delta: 1 } });
+    const result = transitionEquipment({
+      ...input,
+      action: { choiceId: id('Heavy Tool'), delta: 1 }
+    });
     expect(result.accepted).toBe(true);
     expect(result.counts[id('Heavy Tool')]).toBe(2);
     expect(input.selection[id('Heavy Tool')]).toBe(1);

@@ -4,6 +4,7 @@ import {
   calculateTotalPoints,
   createRosterDuplicate,
   generateRosterShareText,
+  getUnitAttachmentEligibility,
   getRosterSubtitle,
   remapRosterIds
 } from './roster.js';
@@ -53,6 +54,7 @@ const createWargear = (overrides: Partial<Wargear> = {}): Wargear => ({
 
 const createRosterUnit = (overrides: Partial<RosterUnit> = {}): RosterUnit => ({
   id: overrides.id ?? 'unit-1',
+  attachedToUnitId: overrides.attachedToUnitId,
   name: overrides.name ?? 'Captain',
   datasheetSlug: overrides.datasheetSlug ?? 'captain',
   datasheet:
@@ -249,6 +251,32 @@ describe('roster utils', () => {
     expect(remapped.enhancements[0].unitId).toBe(unitId);
     expect(remapped.warlordUnitId).toBe(unitId);
     expect(roster.units[0].id).toBe('unit-abc');
+  });
+
+  it('remaps explicit leader attachments when duplicating a roster', () => {
+    const roster = createRoster({
+      units: [
+        createRosterUnit({ id: 'bodyguard' }),
+        createRosterUnit({ id: 'leader', attachedToUnitId: 'bodyguard' })
+      ]
+    });
+    expect(roster.units[1].attachedToUnitId).toBe('bodyguard');
+    const duplicated = remapRosterIds(roster);
+
+    expect(duplicated.units[1].attachedToUnitId).toBe(duplicated.units[0].id);
+    expect(duplicated.units[1].attachedToUnitId).not.toBe('bodyguard');
+  });
+
+  it('rejects self, missing, and incompatible attachment targets', () => {
+    const leader = createRosterUnit({ id: 'leader' });
+    const bodyguard = createRosterUnit({ id: 'bodyguard' });
+    const roster = createRoster({ units: [leader, bodyguard] });
+
+    expect(getUnitAttachmentEligibility(roster, 'leader', 'leader').code).toBe('self');
+    expect(getUnitAttachmentEligibility(roster, 'leader', 'missing').code).toBe(
+      'bodyguard-missing'
+    );
+    expect(getUnitAttachmentEligibility(roster, 'leader', 'bodyguard').eligible).toBe(false);
   });
 
   it('drops enhancements whose unit is missing', () => {

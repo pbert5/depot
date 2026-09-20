@@ -7,13 +7,21 @@ import {
 import { normalizeSelectedWargearAbilities } from '@depot/core/utils/abilities';
 import type { RosterState, RosterAction } from './types';
 import { initialState } from './constants';
-import { calculateTotalPoints, getRosterDetachments } from '@depot/core/utils/roster';
+import {
+  calculateTotalPoints,
+  getRosterDetachments,
+  getUnitAttachmentEligibility
+} from '@depot/core/utils/roster';
 import { enforceCostBrackets, getEnhancementEligibility } from '@depot/core/utils/roster-legality';
 import { createId } from '@/utils/id';
 
 type UnitLike = Pick<
   depot.RosterUnit,
-  'datasheet' | 'selectedWargear' | 'selectedWargearAbilities' | 'datasheetSlug'
+  | 'datasheet'
+  | 'selectedWargear'
+  | 'selectedWargearAbilities'
+  | 'datasheetSlug'
+  | 'attachedToUnitId'
 >;
 
 /** Normalise a stored roster/collection unit against its datasheet (wargear, abilities, slug). */
@@ -27,7 +35,10 @@ export const normalizeUnit = <T extends UnitLike>(unit: T): T => {
       unit.selectedWargearAbilities,
       normalizedDatasheet.abilities
     ),
-    datasheetSlug: unit.datasheetSlug ?? normalizedDatasheet.slug
+    datasheetSlug: unit.datasheetSlug ?? normalizedDatasheet.slug,
+    ...(Object.prototype.hasOwnProperty.call(unit, 'attachedToUnitId')
+      ? { attachedToUnitId: unit.attachedToUnitId ?? null }
+      : {})
   };
 };
 
@@ -96,7 +107,8 @@ export const rosterReducer = (state: RosterState, action: RosterAction): RosterS
         modelCost: action.payload.modelCost,
         selectedWargear: getDefaultWargearSelection(normalizedDatasheet),
         selectedWargearAbilities: [],
-        datasheetSlug: normalizedDatasheet.slug
+        datasheetSlug: normalizedDatasheet.slug,
+        attachedToUnitId: null
       };
       return finalize({ ...state, units: [...state.units, newUnit] });
     }
@@ -104,13 +116,55 @@ export const rosterReducer = (state: RosterState, action: RosterAction): RosterS
     case 'DUPLICATE_UNIT':
       return finalize({
         ...state,
-        units: [...state.units, { ...action.payload.unit, id: createId() }]
+        units: [...state.units, { ...action.payload.unit, id: createId(), attachedToUnitId: null }]
       });
+
+    case 'ATTACH_UNIT': {
+      const { leaderUnitId, bodyguardUnitId } = action.payload;
+      if (!getUnitAttachmentEligibility(state, leaderUnitId, bodyguardUnitId).eligible)
+        return state;
+      return finalize({
+        ...state,
+        units: state.units.map((unit) =>
+          unit.id === leaderUnitId ? { ...unit, attachedToUnitId: bodyguardUnitId } : unit
+        )
+      });
+    }
+
+    case 'DETACH_UNIT':
+      return finalize({
+        ...state,
+        units: state.units.map((unit) =>
+          unit.id === action.payload.leaderUnitId ? { ...unit, attachedToUnitId: null } : unit
+        )
+      });
+
+    case 'SET_UNIT_ATTACHMENT': {
+      const { leaderUnitId, bodyguardUnitId } = action.payload;
+      if (
+        bodyguardUnitId !== null &&
+        !getUnitAttachmentEligibility(state, leaderUnitId, bodyguardUnitId).eligible
+      ) {
+        return state;
+      }
+      return finalize({
+        ...state,
+        units: state.units.map((unit) =>
+          unit.id === leaderUnitId ? { ...unit, attachedToUnitId: bodyguardUnitId } : unit
+        )
+      });
+    }
 
     case 'REMOVE_UNIT':
       return finalize({
         ...state,
-        units: state.units.filter((unit) => unit.id !== action.payload.rosterUnitId),
+        units: state.units
+          .filter((unit) => unit.id !== action.payload.rosterUnitId)
+          .map((unit) =>
+            unit.attachedToUnitId === action.payload.rosterUnitId
+              ? { ...unit, attachedToUnitId: null }
+              : unit
+          ),
         enhancements: state.enhancements.filter(
           (enhancement) => enhancement.unitId !== action.payload.rosterUnitId
         ),

@@ -3,6 +3,7 @@ import { inCostBracket } from './model-costs.js';
 import { getRosterDetachments } from './roster.js';
 import { getEffectiveKeywords } from './effective-keywords.js';
 import { getBattlefieldRole } from './datasheets.js';
+import { getUnitAttachmentEligibility } from './roster.js';
 
 /** Core rules 25.03 battle-size table. */
 export interface BattleSize {
@@ -307,7 +308,21 @@ export const validateRoster = (roster: Roster): RosterIssue[] => {
     }
   }
 
-  for (const support of unmatchedSupportUnits(units)) {
+  for (const unit of units) {
+    if (unit.attachedToUnitId == null) continue;
+    const eligibility = getUnitAttachmentEligibility(roster, unit.id, unit.attachedToUnitId);
+    if (!eligibility.eligible) {
+      issues.push({
+        code: 'attachment',
+        unitId: unit.id,
+        message: `${unit.datasheet.name} has an invalid leader attachment (${eligibility.code}).`
+      });
+    }
+  }
+
+  for (const support of unmatchedSupportUnits(
+    units.filter((unit) => unit.attachedToUnitId == null)
+  )) {
     issues.push({
       code: 'support',
       unitId: support.id,

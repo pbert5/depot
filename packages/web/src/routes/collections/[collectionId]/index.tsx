@@ -141,15 +141,31 @@ const CollectionPageContent: React.FC<{ collectionId?: string }> = ({ collection
   const applyBulkState = async (state: depot.CollectionUnitState) => {
     setStatePickerOpen(false);
     const ids = Array.from(selectedIds);
-    if (!window.confirm(`Change state for ${ids.length} selected unit${ids.length === 1 ? '' : 's'}?`)) return;
+    if (
+      !window.confirm(`Change state for ${ids.length} selected unit${ids.length === 1 ? '' : 's'}?`)
+    )
+      return;
     if (await saveSelectedMutation(ids, { update: (item) => ({ ...item, state }) })) {
-      showToast({ type: 'success', title: 'Units updated', message: 'Selected unit states were changed.' });
+      showToast({
+        type: 'success',
+        title: 'Units updated',
+        message: 'Selected unit states were changed.'
+      });
     }
   };
   const handleBulkRemove = async (ids: string[]) => {
-    if (!window.confirm(`Remove ${ids.length} selected unit${ids.length === 1 ? '' : 's'} from this collection?`)) return;
+    if (
+      !window.confirm(
+        `Remove ${ids.length} selected unit${ids.length === 1 ? '' : 's'} from this collection?`
+      )
+    )
+      return;
     if (await saveSelectedMutation(ids, { remove: true })) {
-      showToast({ type: 'success', title: 'Units removed', message: 'Selected units were removed.' });
+      showToast({
+        type: 'success',
+        title: 'Units removed',
+        message: 'Selected units were removed.'
+      });
     }
   };
 
@@ -312,11 +328,26 @@ const CollectionPageContent: React.FC<{ collectionId?: string }> = ({ collection
     >
       <div className="flex flex-col gap-3">
         {selectionMode ? (
-          <div className="flex flex-wrap items-center justify-between gap-2" data-testid="selection-toolbar">
-            <Button type="button" size="sm" variant="secondary" onClick={() => setSelectedIds(new Set(filteredItems.map((item) => item.id)))} data-testid="select-visible-units">
+          <div
+            className="flex flex-wrap items-center justify-between gap-2"
+            data-testid="selection-toolbar"
+          >
+            <Button
+              type="button"
+              size="sm"
+              variant="secondary"
+              onClick={() => setSelectedIds(new Set(filteredItems.map((item) => item.id)))}
+              data-testid="select-visible-units"
+            >
               Select visible
             </Button>
-            <Button type="button" size="sm" variant="ghost" onClick={cancelSelection} data-testid="cancel-selection">
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              onClick={cancelSelection}
+              data-testid="cancel-selection"
+            >
               Cancel
             </Button>
           </div>
@@ -399,15 +430,29 @@ const CollectionPageContent: React.FC<{ collectionId?: string }> = ({ collection
           )}
         </RosterSection>
       </div>
-      <Drawer isOpen={statePickerOpen} onClose={() => setStatePickerOpen(false)} position="bottom" data-testid="bulk-state-picker" aria-label="Change state for selected units">
+      <Drawer
+        isOpen={statePickerOpen}
+        onClose={() => setStatePickerOpen(false)}
+        position="bottom"
+        data-testid="bulk-state-picker"
+        aria-label="Change state for selected units"
+      >
         <div className="flex flex-col gap-3 p-5">
           <h2 className="text-base font-bold">Change state</h2>
           {COLLECTION_UNIT_STATES.map((state) => (
-            <Button key={state} type="button" variant="secondary" onClick={() => void applyBulkState(state)} data-testid={`bulk-state-${state}`}>
+            <Button
+              key={state}
+              type="button"
+              variant="secondary"
+              onClick={() => void applyBulkState(state)}
+              data-testid={`bulk-state-${state}`}
+            >
               {COLLECTION_STATE_META[state].label}
             </Button>
           ))}
-          <Button type="button" variant="ghost" onClick={() => setStatePickerOpen(false)}>Cancel</Button>
+          <Button type="button" variant="ghost" onClick={() => setStatePickerOpen(false)}>
+            Cancel
+          </Button>
         </div>
       </Drawer>
     </AppLayout>

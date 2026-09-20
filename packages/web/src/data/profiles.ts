@@ -8,6 +8,7 @@ export interface Profile {
   id: string;
   displayName: string;
   createdAt: string;
+  kind: 'main' | 'e2e';
 }
 
 export interface ProfileList {
@@ -18,13 +19,15 @@ export interface ProfileList {
 
 export interface ProfilesAdapter {
   list: () => Promise<ProfileList>;
-  create: (displayName: string) => Promise<Profile>;
+  create: (displayName: string, kind?: Profile['kind']) => Promise<Profile>;
   select: (profileId: string) => Promise<Profile>;
   rename: (profileId: string, displayName: string) => Promise<Profile>;
 }
 
 /** Reserved disposable identity used by the E2E Compose fixture. */
 export const RESERVED_E2E_PROFILE_ID = '00000000-0000-0000-0000-000000000002';
+
+const notifyProfileChanged = () => window.dispatchEvent(new Event('depot:profile-changed'));
 
 const request = async <T>(path: string, init?: RequestInit): Promise<T> => {
   const response = await fetch(`/api${path}`, {
@@ -48,21 +51,29 @@ const request = async <T>(path: string, init?: RequestInit): Promise<T> => {
 
 export const profilesApi: ProfilesAdapter = {
   list: () => request<ProfileList>('/profiles'),
-  create: (displayName) =>
-    request<Profile>('/profiles', {
+  create: async (displayName, kind) => {
+    const profile = await request<Profile>('/profiles', {
       method: 'POST',
-      body: JSON.stringify({ displayName })
-    }),
-  select: async (profileId) => {
-    const profile = await request<Profile>(`/profiles/${encodeURIComponent(profileId)}/select`, { method: 'POST' });
-    window.dispatchEvent(new Event('depot:profile-changed'));
+      body: JSON.stringify({ displayName, ...(kind ? { kind } : {}) })
+    });
+    notifyProfileChanged();
     return profile;
   },
-  rename: (profileId, displayName) =>
-    request<Profile>(`/profiles/${encodeURIComponent(profileId)}`, {
+  select: async (profileId) => {
+    const profile = await request<Profile>(`/profiles/${encodeURIComponent(profileId)}/select`, {
+      method: 'POST'
+    });
+    notifyProfileChanged();
+    return profile;
+  },
+  rename: async (profileId, displayName) => {
+    const profile = await request<Profile>(`/profiles/${encodeURIComponent(profileId)}`, {
       method: 'PATCH',
       body: JSON.stringify({ displayName })
-    })
+    });
+    notifyProfileChanged();
+    return profile;
+  }
 };
 
 export const hideReservedProfiles = (profiles: Profile[]): Profile[] =>

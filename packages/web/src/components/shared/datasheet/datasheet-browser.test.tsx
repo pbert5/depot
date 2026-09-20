@@ -24,7 +24,9 @@ const keyword = (value: string) => [
 ];
 
 describe('DatasheetBrowser', () => {
-  const LocationSearch = () => <output data-testid="location-search">{useLocation().search}</output>;
+  const LocationSearch = () => (
+    <output data-testid="location-search">{useLocation().search}</output>
+  );
   beforeEach(() => {
     window.history.replaceState({}, '', '/');
     sessionStorage.clear();
@@ -144,6 +146,93 @@ describe('DatasheetBrowser', () => {
     expect(screen.getByText('Predator Destructor')).toBeInTheDocument();
   });
 
+  it('uses one category tab system in catalogue mode', () => {
+    const roleDatasheets = [
+      createMockDatasheet({
+        id: 'captain',
+        slug: 'captain',
+        name: 'Captain',
+        keywords: keyword('CHARACTER')
+      }),
+      createMockDatasheet({
+        id: 'intercessor',
+        slug: 'intercessor',
+        name: 'Intercessor',
+        keywords: keyword('BATTLELINE')
+      })
+    ];
+
+    render(
+      <TestWrapper>
+        <DatasheetBrowser
+          datasheets={roleDatasheets}
+          catalogueMode
+          renderDatasheet={(sheet) => <span>{sheet.name}</span>}
+        />
+      </TestWrapper>
+    );
+
+    expect(screen.queryByRole('tablist', { name: 'Datasheet roles' })).not.toBeInTheDocument();
+    expect(screen.getByRole('tablist', { name: 'Datasheet categories' })).toBeInTheDocument();
+  });
+
+  it('categorises catalogue entries with effective detachment keywords', () => {
+    const datasheet = createMockDatasheet({
+      id: 'captain',
+      slug: 'captain',
+      name: 'Captain',
+      keywords: keyword('INFANTRY')
+    });
+
+    render(
+      <TestWrapper>
+        <DatasheetBrowser
+          datasheets={[datasheet]}
+          catalogueMode
+          effectiveKeywordAbilities={[
+            {
+              id: 'detachment-rule',
+              description: 'Your INFANTRY units gain the CHARACTER keyword.',
+              keywordGrants: [{ targetKeyword: 'INFANTRY', grantedKeyword: 'CHARACTER' }]
+            }
+          ]}
+          renderDatasheet={(sheet) => <span>{sheet.name}</span>}
+        />
+      </TestWrapper>
+    );
+
+    expect(screen.getByTestId('datasheet-category-character')).toHaveTextContent('Characters1');
+    expect(screen.queryByTestId('datasheet-category-infantry')).not.toBeInTheDocument();
+  });
+
+  it('categorises catalogue entries from detachment ability grant prose', () => {
+    const datasheet = createMockDatasheet({
+      id: 'captain',
+      slug: 'captain',
+      name: 'Captain',
+      keywords: keyword('INFANTRY')
+    });
+
+    render(
+      <TestWrapper>
+        <DatasheetBrowser
+          datasheets={[datasheet]}
+          catalogueMode
+          effectiveKeywordAbilities={[
+            {
+              id: 'detachment-rule',
+              description: 'Your INFANTRY units gain the CHARACTER keyword.'
+            }
+          ]}
+          renderDatasheet={(sheet) => <span>{sheet.name}</span>}
+        />
+      </TestWrapper>
+    );
+
+    expect(screen.getByTestId('datasheet-category-character')).toHaveTextContent('Characters1');
+    expect(screen.queryByTestId('datasheet-category-infantry')).not.toBeInTheDocument();
+  });
+
   it('shows search clear only when the query is non-empty and clears the query only', async () => {
     const roleDatasheets = [
       createMockDatasheet({
@@ -185,10 +274,31 @@ describe('DatasheetBrowser', () => {
 
   it('persists catalogue search, category and sort state in the URL', async () => {
     const roleDatasheets = [
-      createMockDatasheet({ id: 'captain', slug: 'captain', name: 'Captain', keywords: keyword('CHARACTER') }),
-      createMockDatasheet({ id: 'intercessor', slug: 'intercessor-squad', name: 'Intercessor Squad', keywords: keyword('BATTLELINE') })
+      createMockDatasheet({
+        id: 'captain',
+        slug: 'captain',
+        name: 'Captain',
+        keywords: keyword('CHARACTER')
+      }),
+      createMockDatasheet({
+        id: 'intercessor',
+        slug: 'intercessor-squad',
+        name: 'Intercessor Squad',
+        keywords: keyword('BATTLELINE')
+      })
     ];
-    render(<TestWrapper><><DatasheetBrowser datasheets={roleDatasheets} catalogueMode renderDatasheet={(sheet) => <span>{sheet.name}</span>} /><LocationSearch /></></TestWrapper>);
+    render(
+      <TestWrapper>
+        <>
+          <DatasheetBrowser
+            datasheets={roleDatasheets}
+            catalogueMode
+            renderDatasheet={(sheet) => <span>{sheet.name}</span>}
+          />
+          <LocationSearch />
+        </>
+      </TestWrapper>
+    );
 
     fireEvent.change(screen.getByTestId('datasheet-search'), { target: { value: 'capt' } });
     fireEvent.change(screen.getByTestId('datasheet-sort'), { target: { value: 'points' } });
@@ -202,11 +312,32 @@ describe('DatasheetBrowser', () => {
   });
 
   it('groups an empty catalogue by category and restores state from the session fallback', async () => {
-    sessionStorage.setItem('depot:datasheet-catalogue-state', JSON.stringify({ q: '', group: 'all', sort: 'name', filter: 'all' }));
-    render(<TestWrapper><DatasheetBrowser datasheets={[
-      createMockDatasheet({ id: 'captain', slug: 'captain', name: 'Captain', keywords: keyword('CHARACTER') }),
-      createMockDatasheet({ id: 'intercessor', slug: 'intercessor-squad', name: 'Intercessor Squad', keywords: keyword('BATTLELINE') })
-    ]} catalogueMode renderDatasheet={(sheet) => <span>{sheet.name}</span>} /></TestWrapper>);
+    sessionStorage.setItem(
+      'depot:datasheet-catalogue-state',
+      JSON.stringify({ q: '', group: 'all', sort: 'name', filter: 'all' })
+    );
+    render(
+      <TestWrapper>
+        <DatasheetBrowser
+          datasheets={[
+            createMockDatasheet({
+              id: 'captain',
+              slug: 'captain',
+              name: 'Captain',
+              keywords: keyword('CHARACTER')
+            }),
+            createMockDatasheet({
+              id: 'intercessor',
+              slug: 'intercessor-squad',
+              name: 'Intercessor Squad',
+              keywords: keyword('BATTLELINE')
+            })
+          ]}
+          catalogueMode
+          renderDatasheet={(sheet) => <span>{sheet.name}</span>}
+        />
+      </TestWrapper>
+    );
 
     expect(screen.getByRole('heading', { name: 'Characters' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Battleline' })).toBeInTheDocument();

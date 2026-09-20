@@ -33,7 +33,15 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
 const documents = (value: unknown, label: string): BackupDocument[] => {
   if (!Array.isArray(value)) throw new Error(`The backup is missing a ${label} array.`);
   return value.map((entry, index) => {
-    if (!isRecord(entry) || typeof entry.id !== 'string' || !entry.id || typeof entry.name !== 'string' || !entry.name || typeof entry.factionId !== 'string' || !entry.factionId) {
+    if (
+      !isRecord(entry) ||
+      typeof entry.id !== 'string' ||
+      !entry.id ||
+      typeof entry.name !== 'string' ||
+      !entry.name ||
+      typeof entry.factionId !== 'string' ||
+      !entry.factionId
+    ) {
       throw new Error(`${label} item ${index + 1} must have an id, name, and factionId.`);
     }
     return entry as BackupDocument;
@@ -57,7 +65,13 @@ export const parseBackup = (content: string, format: BackupFormat): BackupBundle
     if (ids.has(document.id)) throw new Error(`The backup contains duplicate ID "${document.id}".`);
     ids.add(document.id);
   }
-  return { ...value, format: 'depot-user-data', formatVersion: 1, rosters, collections } as BackupBundle;
+  return {
+    ...value,
+    format: 'depot-user-data',
+    formatVersion: 1,
+    rosters,
+    collections
+  } as BackupBundle;
 };
 
 export const getBackupFormat = (file: File): BackupFormat | null => {

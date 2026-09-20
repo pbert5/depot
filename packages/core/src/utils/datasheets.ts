@@ -149,20 +149,53 @@ export type { BattlefieldRole };
 
 /** Faction-independent catalogue buckets derived from exact datasheet keywords. */
 export type DatasheetCategory =
-  | 'epic-hero' | 'character' | 'battleline' | 'dedicated-transport' | 'infantry' | 'mounted' | 'beast'
-  | 'swarm' | 'transport' | 'vehicle' | 'monster' | 'aircraft' | 'fortification' | 'other';
+  | 'epic-hero'
+  | 'character'
+  | 'battleline'
+  | 'dedicated-transport'
+  | 'infantry'
+  | 'mounted'
+  | 'beast'
+  | 'swarm'
+  | 'transport'
+  | 'vehicle'
+  | 'monster'
+  | 'aircraft'
+  | 'fortification'
+  | 'other';
 
 export const DATASHEET_CATEGORY_LABELS: Record<DatasheetCategory, string> = {
-  'epic-hero': 'Epic Heroes', character: 'Characters', battleline: 'Battleline',
+  'epic-hero': 'Epic Heroes',
+  character: 'Characters',
+  battleline: 'Battleline',
   'dedicated-transport': 'Dedicated Transports',
-  infantry: 'Infantry', mounted: 'Mounted', beast: 'Beasts', swarm: 'Swarms',
-  transport: 'Transports', vehicle: 'Vehicles', monster: 'Monsters', aircraft: 'Aircraft',
-  fortification: 'Fortifications', other: 'Other Units'
+  infantry: 'Infantry',
+  mounted: 'Mounted',
+  beast: 'Beasts',
+  swarm: 'Swarms',
+  transport: 'Transports',
+  vehicle: 'Vehicles',
+  monster: 'Monsters',
+  aircraft: 'Aircraft',
+  fortification: 'Fortifications',
+  other: 'Other Units'
 };
 
 export const DATASHEET_CATEGORIES: DatasheetCategory[] = [
-  'epic-hero', 'character', 'battleline', 'dedicated-transport', 'infantry', 'mounted', 'beast', 'swarm',
-  'transport', 'vehicle', 'monster', 'aircraft', 'fortification', 'other'
+  'epic-hero',
+  'character',
+  'battleline',
+  'dedicated-transport',
+  'infantry',
+  'mounted',
+  'beast',
+  'swarm',
+  'transport',
+  'vehicle',
+  'monster',
+  'aircraft',
+  'fortification',
+  'other'
 ];
 
 export const BATTLEFIELD_ROLE_LABELS: Record<BattlefieldRole, string> = {
@@ -230,9 +263,7 @@ export const getListItemCategory = (item: DatasheetListItem): DatasheetCategory 
 export const getDatasheetCategory = deriveDatasheetCategory;
 
 /** Exact, non-faction keyword labels not consumed by the primary category. */
-export const getSecondaryKeywordTags = (
-  datasheet: Pick<Datasheet, 'keywords'>
-): string[] => {
+export const getSecondaryKeywordTags = (datasheet: Pick<Datasheet, 'keywords'>): string[] => {
   const primaryKeywords = new Set(['epic hero', 'character', 'battleline']);
   const seen = new Set<string>();
   return datasheet.keywords
@@ -245,10 +276,8 @@ export const getSecondaryKeywordTags = (
     .map((entry) => entry.keyword.trim());
 };
 
-export const hasExactKeyword = (
-  datasheet: Pick<Datasheet, 'keywords'>,
-  keyword: string
-): boolean => hasKeyword(datasheet, keyword);
+export const hasExactKeyword = (datasheet: Pick<Datasheet, 'keywords'>, keyword: string): boolean =>
+  hasKeyword(datasheet, keyword);
 
 /**
  * Role and points for a list row. Full datasheets carry the source data; index
@@ -261,10 +290,10 @@ export const getListItemRole = (item: DatasheetListItem): BattlefieldRole =>
 export const getListItemPoints = (item: DatasheetListItem): string | null =>
   'modelCosts' in item ? summarizeModelCosts(item.modelCosts) : (item.points ?? null);
 
-export const getListItemMinimumPoints = (
-  item: DatasheetListItem
-): number | null =>
-  'modelCosts' in item ? getMinimumNumericPoints(item.modelCosts) : numericSummaryPoints(item.points);
+export const getListItemMinimumPoints = (item: DatasheetListItem): number | null =>
+  'modelCosts' in item
+    ? getMinimumNumericPoints(item.modelCosts)
+    : numericSummaryPoints(item.points);
 
 const numericSummaryPoints = (points: string | null | undefined): number | null => {
   const value = points?.replace(/\+$/, '');

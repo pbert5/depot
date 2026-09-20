@@ -36,11 +36,14 @@ describe('UnitEditShell', () => {
       ]
     });
     const unit = createMockRosterUnit({ datasheet });
-    const onSave = vi.fn<(selection: {
-      selectedWargear: depot.Wargear[];
-      selectedWargearAbilities: depot.Ability[];
-      selectedModelCost?: depot.ModelCost;
-    }) => void>();
+    const onSave =
+      vi.fn<
+        (selection: {
+          selectedWargear: depot.Wargear[];
+          selectedWargearAbilities: depot.Ability[];
+          selectedModelCost?: depot.ModelCost;
+        }) => void
+      >();
 
     render(
       <UnitEditShell
@@ -91,5 +94,70 @@ describe('UnitEditShell', () => {
 
     expect(onSave).not.toHaveBeenCalled();
     expect(mockNavigate).toHaveBeenCalledWith('/rosters/roster-1/edit#unit-unit-1');
+  });
+
+  it('lists compatible attachment targets with duplicate names disambiguated and saves the selection', () => {
+    const leader = createMockRosterUnit({
+      datasheet: createMockDatasheet({ leaders: [{ id: 'bodyguard', slug: 'bodyguard' }] })
+    });
+    const targetOne = createMockRosterUnit({
+      id: 'bodyguard-1',
+      datasheet: createMockDatasheet({ id: 'bodyguard', slug: 'bodyguard', name: 'Bodyguard' })
+    });
+    const targetTwo = createMockRosterUnit({
+      id: 'bodyguard-2',
+      datasheet: createMockDatasheet({ id: 'bodyguard', slug: 'bodyguard', name: 'Bodyguard' })
+    });
+    const onSave = vi.fn();
+
+    render(
+      <UnitEditShell
+        unit={leader}
+        testId="edit-unit-form"
+        backTo="/rosters/roster-1/edit#unit-unit-1"
+        backLabel="Roster"
+        documentTitle="Edit unit"
+        title={leader.datasheet.name}
+        onSave={onSave}
+        {...{
+          attachmentTargets: [
+            { unit: targetOne, label: 'Bodyguard · Unit 1' },
+            { unit: targetTwo, label: 'Bodyguard · Unit 2' }
+          ]
+        }}
+      />,
+      { wrapper: TestWrapper }
+    );
+
+    const attachment = screen.getByTestId('unit-attachment-select') as HTMLSelectElement;
+    expect(Array.from(attachment.options).map((option) => option.text)).toEqual([
+      'Not attached',
+      'Bodyguard · Unit 1',
+      'Bodyguard · Unit 2'
+    ]);
+
+    fireEvent.change(attachment, { target: { value: targetTwo.id } });
+    fireEvent.click(screen.getByTestId('save-button'));
+
+    expect(onSave).toHaveBeenCalledWith(
+      expect.objectContaining({ attachedToUnitId: targetTwo.id })
+    );
+  });
+
+  it('does not render an attachment control when no targets are provided', () => {
+    render(
+      <UnitEditShell
+        unit={createMockRosterUnit()}
+        testId="edit-unit-form"
+        backTo="/rosters/roster-1/edit"
+        backLabel="Roster"
+        documentTitle="Edit unit"
+        title="Captain"
+        onSave={vi.fn()}
+      />,
+      { wrapper: TestWrapper }
+    );
+
+    expect(screen.queryByTestId('unit-attachment-select')).not.toBeInTheDocument();
   });
 });

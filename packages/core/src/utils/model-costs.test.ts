@@ -39,11 +39,7 @@ describe('model cost helpers', () => {
 
   it('returns the minimum numeric points value and ignores malformed costs', () => {
     expect(
-      getMinimumNumericPoints([
-        row({ cost: ' 215 ' }),
-        row({ cost: '170' }),
-        row({ cost: '170+' })
-      ])
+      getMinimumNumericPoints([row({ cost: ' 215 ' }), row({ cost: '170' }), row({ cost: '170+' })])
     ).toBe(170);
     expect(getMinimumNumericPoints([row({ cost: '' }), row({ cost: 'N/A' })])).toBeNull();
   });

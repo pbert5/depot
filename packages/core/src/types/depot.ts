@@ -140,7 +140,8 @@ export interface Datasheet {
 }
 
 /** Grouping bucket for a datasheet; derived from its keywords. */
-export type BattlefieldRole = 'epic-hero' | 'character' | 'battleline' | 'dedicated-transport' | 'other';
+export type BattlefieldRole =
+  'epic-hero' | 'character' | 'battleline' | 'dedicated-transport' | 'other';
 
 export interface DatasheetSummary {
   id: string;
@@ -228,6 +229,8 @@ export interface Detachment {
 // Represents a single unit added to a roster, including its selected options and cost.
 export interface RosterUnit {
   id: string; // A unique ID for this specific instance in the roster
+  /** Id of the bodyguard unit this leader is explicitly attached to. */
+  attachedToUnitId?: string | null;
   datasheet: Datasheet;
   modelCost: ModelCost; // The selected model/unit count and its point cost
   selectedWargear: Wargear[];
@@ -340,6 +343,7 @@ export type EnhancementRef = Pick<Enhancement, 'id' | 'name' | 'cost' | 'detachm
 
 export interface StoredUnit {
   id: string;
+  attachedToUnitId?: string | null;
   datasheet: DatasheetRef;
   datasheetSlug?: string;
   modelCost: ModelCost;

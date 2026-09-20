@@ -19,8 +19,14 @@ const UnitsTab: React.FC<UnitsTabProps> = ({ roster }) => {
       byRole.set(role, [...(byRole.get(role) ?? []), unit]);
     }
     return BATTLEFIELD_ROLES.filter((role) => byRole.has(role)).map((role) => {
-      const grouped = [...byRole.get(role)!].sort((a, b) => a.datasheet.name.localeCompare(b.datasheet.name));
-      return { role, units: grouped, points: grouped.reduce((sum, unit) => sum + (parseInt(unit.modelCost.cost, 10) || 0), 0) };
+      const grouped = [...byRole.get(role)!].sort((a, b) =>
+        a.datasheet.name.localeCompare(b.datasheet.name)
+      );
+      return {
+        role,
+        units: grouped,
+        points: grouped.reduce((sum, unit) => sum + (parseInt(unit.modelCost.cost, 10) || 0), 0)
+      };
     });
   }, [roster, units]);
 
@@ -47,10 +53,23 @@ const UnitsTab: React.FC<UnitsTabProps> = ({ roster }) => {
   return (
     <div className="flex flex-col gap-4" data-testid="units-tab">
       {sections.map(({ role, units: grouped, points }) => (
-        <RosterSection key={role} title={BATTLEFIELD_ROLE_LABELS[role]} count={`${grouped.length} · ${points} PTS`}>
+        <RosterSection
+          key={role}
+          title={BATTLEFIELD_ROLE_LABELS[role]}
+          count={`${grouped.length} · ${points} PTS`}
+        >
           <div className="flex flex-col gap-4">
             {grouped.map((unit) => (
-              <ViewRosterUnitCard key={unit.id} unit={unit} isWarlord={roster.warlordUnitId === unit.id} enhancementName={enhancementsByUnit.get(unit.id)} issues={issuesByUnit.get(unit.id)} />
+              <ViewRosterUnitCard
+                key={unit.id}
+                unit={unit}
+                isWarlord={roster.warlordUnitId === unit.id}
+                enhancementName={enhancementsByUnit.get(unit.id)}
+                attachedToUnitName={
+                  roster.units.find((target) => target.id === unit.attachedToUnitId)?.datasheet.name
+                }
+                issues={issuesByUnit.get(unit.id)}
+              />
             ))}
           </div>
         </RosterSection>

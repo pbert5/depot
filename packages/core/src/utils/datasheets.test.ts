@@ -306,10 +306,15 @@ describe('list item role and points', () => {
       'alpha',
       'bravo'
     ]);
-    expect(filterDatasheetsByKeyword([
-      { ...makeDatasheet({ slug: 'flyer', keywords: [{ keyword: 'Fly' }] }) },
-      { ...makeDatasheet({ slug: 'not-flyer', keywords: [{ keyword: 'Flyer' }] }) }
-    ], 'fly').map((sheet) => sheet.slug)).toEqual(['flyer']);
+    expect(
+      filterDatasheetsByKeyword(
+        [
+          { ...makeDatasheet({ slug: 'flyer', keywords: [{ keyword: 'Fly' }] }) },
+          { ...makeDatasheet({ slug: 'not-flyer', keywords: [{ keyword: 'Flyer' }] }) }
+        ],
+        'fly'
+      ).map((sheet) => sheet.slug)
+    ).toEqual(['flyer']);
     expect(sortDatasheetsByCategory(sheets).map((sheet) => sheet.slug)).toEqual([
       'alpha',
       'bravo',
